@@ -34,7 +34,8 @@
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: 80px; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 400 17px/1.65 var(--sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-img { max-width: 100%; display: block; }
+/* height: auto mantém a proporção quando a imagem encolhe (os atributos width/height só reservam o espaço). */
+img { max-width: 100%; height: auto; display: block; }
 a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
 ::selection { background: var(--accent-wash); }
 .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 var(--gutter); }
