@@ -62,7 +62,7 @@ h1 em { font-style: italic; color: var(--accent); font-weight: 500; }
 .acoes { display: flex; gap: 12px; flex-wrap: wrap; }
 .btn { display: inline-flex; align-items: center; gap: 10px; padding: 13px 20px; border-radius: 12px; font: 600 15px/1 var(--sans); text-decoration: none; border: 1px solid var(--border-2); color: var(--text); background: var(--surface); transition: transform 0.15s, border-color 0.15s; }
 .btn:hover { transform: translateY(-1px); border-color: var(--accent); }
-.btn.primario { background: var(--accent-2); border-color: var(--accent-2); color: #fff; }
+.btn.primario { background: var(--accent-2); border-color: var(--accent-2); color: var(--on-accent, #fff); }
 .numeros { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-top: 56px; }
 .numeros div { background: var(--surface); padding: 20px 22px; }
 .numeros strong { display: block; font: 600 30px/1.1 var(--serif); letter-spacing: -0.01em; }
@@ -189,6 +189,15 @@ figure img { border-radius: 14px; border: 1px solid var(--border); box-shadow: v
 /* Pílulas (stack) */
 .pilulas { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
 .pilulas span { font: 500 13px/1 var(--mono); padding: 9px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text-2); }
+
+/* Linha do tempo (evolução do projeto pelo histórico do git) */
+.linha-tempo { list-style: none; margin: 28px 0; padding: 0 0 0 2px; border-left: 2px solid var(--border); max-width: 760px; }
+.linha-tempo li { position: relative; padding: 0 0 24px 26px; }
+.linha-tempo li:last-child { padding-bottom: 4px; }
+.linha-tempo li::before { content: ""; position: absolute; left: -8px; top: 5px; width: 14px; height: 14px; border-radius: 50%; background: var(--bg); border: 2px solid var(--accent); }
+.linha-tempo time { font: 500 13px/1.4 var(--mono); color: var(--accent); }
+.linha-tempo b { display: block; font: 600 16px/1.4 var(--sans); margin: 2px 0 4px; color: var(--text); }
+.linha-tempo span { color: var(--text-2); font-size: 15px; }
 
 /* Encerramento */
 .encerramento { margin: 40px 0 0; padding: clamp(32px, 5vw, 56px); border-radius: 22px; border: 1px solid var(--border); background: linear-gradient(135deg, var(--accent-wash), transparent 60%), var(--surface); }
