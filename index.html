@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Diagnóstico Comercial · Estudo de caso</title>
+  <meta name="description" content="Estudo de caso: do ERP a um painel comercial 24/7. Descoberta das bases, modelagem fato/dimensão, banco, backend, front-end, validação e implantação. Dados fictícios.">
+  <meta property="og:title" content="Diagnóstico Comercial · do ERP ao painel 24/7">
+  <meta property="og:description" content="Estudo de caso completo de um painel de sell-in: modelagem, pipeline, front-end, validação e implantação.">
+  <meta property="og:image" content="assets/painel-visao-geral.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/estudo.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="wrap">
+      <a class="marca" href="#inicio"><i></i>Diagnóstico Comercial</a>
+      <nav>
+        <a class="opcional" href="#c00">Estudo de caso</a>
+        <a class="opcional" href="https://github.com/lariantunez/Diagnostico-Comercial">Código</a>
+        <a href="painel/">Abrir painel</a>
+        <button class="btn-tema" id="tema" type="button" aria-label="Trocar tema">☀</button>
+      </nav>
+      <span class="progresso"></span>
+    </div>
+  </header>
+
+  <main id="inicio">
+    <section class="abertura">
+      <div class="wrap">
+        <span class="selo-topo"><b>●</b> Projeto em produção · versão de portfólio com dados fictícios</span>
+        <h1>Do ERP ao painel <em>24/7</em>.</h1>
+        <p class="lead">Como transformamos doze extrações soltas de um ERP e de um BI em um diagnóstico comercial confiável: modelagem fato/dimensão, banco na nuvem, pipeline de carga, um painel interativo feito do zero, validação número a número contra a fonte oficial e implantação rodando o dia inteiro.</p>
+        <div class="acoes">
+          <a class="btn primario" href="painel/">Explorar o painel →</a>
+          <a class="btn" href="#c00">Ler o estudo de caso</a>
+        </div>
+        <div class="numeros">
+          <div><strong>37</strong><span>meses de histórico, em janela móvel</span></div>
+          <div><strong>12</strong><span>bases de origem (ERP + BI)</span></div>
+          <div><strong>11</strong><span>etapas de carga automatizadas</span></div>
+          <div><strong>5</strong><span>visões analíticas no painel</span></div>
+          <div><strong>24/7</strong><span>no ar, com importação pelo navegador</span></div>
+        </div>
+        <figure class="vitrine">
+          <div class="barra-janela"><i></i><i></i><i></i><span>painel/ · Visão geral (dados fictícios)</span></div>
+          <img src="assets/painel-visao-geral.jpg" alt="Visão geral do painel: filtros no topo, cartões de clientes, faturamento, pedidos e tickets com comparação ao ano anterior" width="1440" height="900">
+        </figure>
+      </div>
+    </section>
+
+    <div class="wrap livro">
+      <aside class="indice" aria-label="Capítulos">
+        <p>Capítulos</p>
+        <ol>
+          <li><a href="#c00"><b>00</b>O desafio</a></li>
+          <li><a href="#c01"><b>01</b>Princípios</a></li>
+          <li><a href="#c02"><b>02</b>Onde estão os dados</a></li>
+          <li><a href="#c03"><b>03</b>Fluxograma das tabelas</a></li>
+          <li><a href="#c04"><b>04</b>Estruturação e regras</a></li>
+          <li><a href="#c05"><b>05</b>Fatos e dimensões</a></li>
+          <li><a href="#c06"><b>06</b>O banco de dados</a></li>
+          <li><a href="#c07"><b>07</b>Backend e carga</a></li>
+          <li><a href="#c08"><b>08</b>Front-end</a></li>
+          <li><a href="#c09"><b>09</b>Ajustes de layout</a></li>
+          <li><a href="#c10"><b>10</b>Validação</a></li>
+          <li><a href="#c11"><b>11</b>Implantação 24/7</a></li>
+          <li><a href="#c12"><b>12</b>Esta versão</a></li>
+        </ol>
+      </aside>
+
+      <div class="capitulos">
+        <!-- 00 -->
+        <section class="capitulo" id="c00">
+          <span class="rotulo-cap">00 · O desafio</span>
+          <h2>Muitos relatórios, nenhum diagnóstico.</h2>
+          <p>A área comercial de uma indústria de cosméticos profissionais vende para distribuidores, redes de perfumaria, lojas, salões e farmácias em todo o país. Os dados existiam, mas espalhados: cadastros no ERP, vendas em relatórios de BI, agendas de demonstradoras em tabelas customizadas e um relatório oficial de faturamento usado pela diretoria. Cada pergunta virava uma planilha nova, e duas planilhas raramente davam o mesmo número.</p>
+          <p class="destaque revelar">“Quem comprou, quem parou, quem cresceu, por quê, e onde?”, respondido em um lugar só, com um número que bate com o oficial.</p>
+          <div class="grade g3 revelar">
+            <div class="cartao azul"><span class="num">CARTEIRA</span><h4>Quem está comprando?</h4><p>Clientes ativos, novos, reativados, perdidos (12 meses sem comprar) e quem cresceu ou reduziu frente ao ano anterior.</p></div>
+            <div class="cartao verde"><span class="num">CRESCIMENTO</span><h4>De onde veio o resultado?</h4><p>Decomposição do crescimento por situação do cliente, segmentação, estado, vendedor, categoria e efeito do reajuste de preço.</p></div>
+            <div class="cartao ambar"><span class="num">AÇÃO</span><h4>Onde agir?</h4><p>Penetração das categorias nos clientes, oportunidades, lojas com demonstradora e carteira de cada vendedor, até o detalhe dia a dia.</p></div>
+          </div>
+        </section>
+
+        <!-- 01 -->
+        <section class="capitulo" id="c01">
+          <span class="rotulo-cap">01 · Princípios</span>
+          <h2>Antes do código, a ideologia.</h2>
+          <p>Combinamos com a área de negócio um conjunto curto de princípios. Eles resolveram dezenas de discussões depois: quando surgia uma dúvida, a resposta já estava escrita.</p>
+          <div class="grade g2 revelar">
+            <div class="cartao"><span class="num">01</span><h4>O negócio decide a regra; o dado obedece</h4><p>Toda regra (o que é cliente ativo, perdido, novo; o que conta como pedido) foi definida pela área comercial, documentada e aplicada igual em todo o sistema.</p></div>
+            <div class="cartao"><span class="num">02</span><h4>Todo faturamento conta</h4><p>Nada é descartado em silêncio. Produto sem cadastro vira “sem classificação”; devolução entra com sinal negativo; funcionário entra no total, mas não como cliente.</p></div>
+            <div class="cartao"><span class="num">03</span><h4>Um cliente é um nome fantasia</h4><p>Mesmo nome fantasia = mesmo cliente, em qualquer filial e mesmo com CNPJ novo. Quando são empresas diferentes, a correção é feita na origem (o cadastro), não com exceção no código.</p></div>
+            <div class="cartao"><span class="num">04</span><h4>Nenhum número sem conferência</h4><p>Cada visão foi validada contra o relatório oficial antes de ser liberada. Diferença encontrada tem explicação escrita ou correção.</p></div>
+            <div class="cartao"><span class="num">05</span><h4>Do macro para o micro</h4><p>A página conta uma história de cima para baixo: indicadores gerais → movimentação da carteira → composição do crescimento → segmentação → estados → vendedores → produtos.</p></div>
+            <div class="cartao"><span class="num">06</span><h4>Todo número é um filtro</h4><p>Clicar em qualquer barra, fatia, estado, linha ou cartão filtra a página inteira. Os filtros se acumulam, aparecem como selos e saem com um clique.</p></div>
+          </div>
+        </section>
+
+        <!-- 02 -->
+        <section class="capitulo" id="c02">
+          <span class="rotulo-cap">02 · Onde estão os dados</span>
+          <h2>Mapeando as bases dentro do sistema.</h2>
+          <p>A primeira entrega não foi código: foi um <strong>inventário</strong>. Para cada pergunta do negócio, localizamos a tabela que a responde no ERP (TOTVS Protheus) ou no BI, entendemos o <strong>grão</strong> (o que é uma linha) e anotamos a armadilha de cada uma. Essas armadilhas viraram as regras do capítulo 04.</p>
+          <div class="tabela-rolagem revelar">
+            <table class="tabela">
+              <thead><tr><th>Base</th><th>Onde está</th><th>O que traz</th><th>Armadilha encontrada</th></tr></thead>
+              <tbody>
+                <tr><td>Clientes <code>SA1</code></td><td>ERP</td><td>Filial, código, loja, CNPJ, nome fantasia, segmentação, vendedor atual</td><td>Funcionários com CPF, cadastros de teste, duplicados e a mesma loja com CNPJ trocado</td></tr>
+                <tr><td>Vendedores <code>SA3</code></td><td>ERP</td><td>Código, nome e situação</td><td>O vendedor atual do cadastro não é o vendedor da venda: o histórico vem do fato</td></tr>
+                <tr><td>Produtos <code>SB1</code></td><td>ERP</td><td>Código, descrição, tipo, GTIN</td><td>Produto faturado fora do cadastro válido não pode sumir do faturamento</td></tr>
+                <tr><td>Grupos <code>SBM</code></td><td>ERP</td><td>Categoria (linha) de cada produto</td><td>Produto sem grupo precisa de uma categoria explícita</td></tr>
+                <tr><td>Agendas <code>ZVX</code> / <code>ZVY</code></td><td>ERP (tabelas customizadas)</td><td>Agenda mensal de cada demonstradora e as lojas atendidas</td><td>Uma agenda genérica da própria empresa não é demonstradora e não pode contar</td></tr>
+                <tr><td>Faturamento por produto</td><td>BI</td><td>Dia × cliente × vendedor × produto: quantidade, preço sem bonificação, valor</td><td>A quantidade de pedidos se repete em cada linha de produto: somar duplica</td></tr>
+                <tr><td>Pedidos por cliente</td><td>BI</td><td>Dia × cliente × vendedor: quantidade de pedidos e faturamento</td><td>É a única base em que pedidos podem ser somados</td></tr>
+                <tr><td>Sell in</td><td>BI</td><td>Mês × produto × cliente</td><td>Define a data de lançamento (primeira venda) de cada produto</td></tr>
+                <tr><td>Filiais e demonstradoras</td><td>BI (dimensões)</td><td>Nomes das filiais; CPF e nome das demonstradoras</td><td>Complementam cadastros, mas não decidem quem teve atendimento</td></tr>
+                <tr><td>Faturamento oficial</td><td>ERP (relatório)</td><td>O número que a diretoria usa</td><td>Não alimenta o painel: é a régua de validação de cada carga</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 03 -->
+        <section class="capitulo" id="c03">
+          <span class="rotulo-cap">03 · Fluxograma das tabelas</span>
+          <h2>Um caminho único, da extração ao clique.</h2>
+          <p>Desenhamos o fluxo antes de escrever a primeira linha de carga. Cada base entra por uma etapa de tratamento com responsabilidade única, vira dimensão ou fato no banco e chega ao navegador num pacote compacto. Nenhuma tela lê arquivo bruto.</p>
+          <div class="fluxo revelar" role="img" aria-label="Fluxo: fontes do ERP e do BI, tratamento, banco com dimensões e fatos, pacote do painel e painel">
+            <div class="coluna"><b>1 · Fontes</b>
+              <div class="item erp">SA1 · SA3 · SB1 · SBM<small>cadastros do ERP</small></div>
+              <div class="item erp">ZVX · ZVY<small>agendas das demonstradoras</small></div>
+              <div class="item bi">Faturamento × produto<small>dia, cliente, vendedor, SKU</small></div>
+              <div class="item bi">Pedidos × cliente · Sell in<small>pedidos e lançamento</small></div>
+              <div class="item bi">Filiais · Demonstradoras<small>dimensões do BI</small></div>
+              <div class="item adv">Faturamento oficial<small>régua de validação</small></div>
+            </div>
+            <div class="seta">→</div>
+            <div class="coluna"><b>2 · Tratamento</b>
+              <div class="item">Clientes<small>exclusões, duplicados, unificação</small></div>
+              <div class="item">Vendedores<small>situação e carteira</small></div>
+              <div class="item">Produtos e agendas<small>categoria, GTIN, lançamento</small></div>
+              <div class="item">Filiais<small>de-para fixo</small></div>
+              <div class="item">Relatórios de exclusão<small>tudo que saiu tem motivo</small></div>
+            </div>
+            <div class="seta">→</div>
+            <div class="coluna"><b>3 · Banco</b>
+              <div class="item dim">9 dimensões<small>clientes, produtos, vendedores, períodos…</small></div>
+              <div class="item fato">2 fatos + 1 evento<small>faturamento, pedidos, mix da compra</small></div>
+              <div class="item">Controle<small>cargas, histórico, usuários</small></div>
+            </div>
+            <div class="seta">→</div>
+            <div class="coluna"><b>4 · Painel</b>
+              <div class="item">Pacote binário<small>vetores em base64</small></div>
+              <div class="item">Motor no navegador<small>recalcula a cada filtro</small></div>
+              <div class="item">5 visões<small>geral, clientes, produtos, equipe, geografia</small></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 04 -->
+        <section class="capitulo" id="c04">
+          <span class="rotulo-cap">04 · Estruturação e regras</span>
+          <h2>Limpar sem perder: cada exclusão tem um motivo.</h2>
+          <p>O cadastro de clientes é o coração do diagnóstico, e também a base mais suja. A etapa de tratamento separa o que é cliente do que não é, sem apagar nada: cada cadastro desconsiderado vai para um relatório com o motivo e continua visível no painel, na tabela “Cadastro geral”. Abaixo, o funil com os números da base fictícia desta versão:</p>
+          <div class="funil revelar">
+            <div style="--w:100%"><span>Cadastros lidos da SA1</span><b>2.001</b></div>
+            <div class="sai" style="--w:2.1%"><span>Funcionários (CPF): o faturamento conta, mas não são clientes</span><b>−42</b></div>
+            <div class="sai" style="--w:3%"><span>Sem CNPJ válido</span><b>−61</b></div>
+            <div class="sai" style="--w:2.4%"><span>Sem vendedor responsável</span><b>−48</b></div>
+            <div class="sai" style="--w:1.6%"><span>Não é cliente (fornecedor, transportadora…)</span><b>−33</b></div>
+            <div class="sai" style="--w:1.3%"><span>Duplicados (mantido o cadastro ativo)</span><b>−26</b></div>
+            <div class="sai" style="--w:0.6%"><span>Teste e empresas internas</span><b>−11</b></div>
+            <div class="fica" style="--w:89%"><span>Cadastros válidos</span><b>1.780</b></div>
+            <div class="fica" style="--w:87.5%"><span>Clientes (nomes fantasia distintos, após a unificação)</span><b>1.750</b></div>
+          </div>
+          <h3>Regras que viraram código</h3>
+          <div class="grade g2 revelar">
+            <div class="cartao"><h4>Janela móvel de 37 meses</h4><p>O mês mais recente das bases define a janela: ele e os 36 anteriores. O mês em andamento fica marcado como parcial, e a comparação usa o mesmo período do ano anterior.</p></div>
+            <div class="cartao"><h4>Unificação por nome fantasia</h4><p>Cadastros com o mesmo nome (sem acento, espaço e pontuação) viram um cliente, que herda cidade, segmentação e vendedor do cadastro da compra mais recente.</p></div>
+            <div class="cartao"><h4>Situação do cliente</h4><p><strong>Ativo:</strong> comprou no período. <strong>Perdido:</strong> completou 12 meses sem comprar dentro do período. <strong>Novo ou reativado:</strong> sem compra nos 12 meses anteriores. <strong>Cresceu ou reduziu:</strong> contra o mesmo período do ano anterior.</p></div>
+            <div class="cartao"><h4>Reajuste de preço</h4><p>Faturamento atual ÷ (peças atuais × preço do ano anterior) − 1, só com SKUs vendidos nos dois períodos. Assim, preço não se confunde com volume nem com mix.</p></div>
+          </div>
+        </section>
+
+        <!-- 05 -->
+        <section class="capitulo" id="c05">
+          <span class="rotulo-cap">05 · Fatos e dimensões</span>
+          <h2>Um modelo estrela com o grão certo.</h2>
+          <p>A decisão mais importante da modelagem foi o <strong>grão</strong> de cada fato. O faturamento por produto não sabe quantos pedidos houve, e a base de pedidos não sabe quais produtos foram comprados. Em vez de forçar uma tabela única, mantivemos <strong>dois fatos com grãos diferentes</strong>, cada um responsável pelos indicadores que consegue somar sem erro, e um evento que liga os produtos à compra do dia.</p>
+          <figure class="diagrama revelar">
+            <svg viewBox="0 0 960 560" role="img" aria-label="Modelo estrela: três tabelas de fato ao centro ligadas a dimensões de clientes, vendedores, produtos e períodos, com dimensões de apoio">
+              <g class="ligas">
+                <path class="liga forte" d="M365 142 C 310 142, 310 69, 260 69"/><path class="liga forte" d="M365 252 C 300 252, 310 69, 260 69"/><path class="liga forte" d="M365 362 C 290 362, 310 69, 260 69"/>
+                <path class="liga forte" d="M595 142 C 650 142, 650 69, 700 69"/><path class="liga forte" d="M595 362 C 660 362, 650 69, 700 69"/>
+                <path class="liga forte" d="M595 142 C 650 142, 650 249, 700 249"/><path class="liga forte" d="M595 252 C 650 252, 650 249, 700 249"/><path class="liga forte" d="M595 362 C 650 362, 650 249, 700 249"/>
+                <path class="liga forte" d="M595 142 C 660 142, 650 339, 700 339"/><path class="liga forte" d="M595 252 C 660 252, 650 339, 700 339"/>
+                <path class="liga" d="M30 69 H14 V339 H30 M14 159 H30 M14 249 H30"/>
+                <path class="liga" d="M930 69 H946 V159 H930"/>
+                <path class="liga" d="M365 489 C 300 489, 310 429, 260 429"/><path class="liga" d="M480 460 V 400"/>
+              </g>
+              <g class="no dim"><rect x="30" y="40" width="230" height="58" rx="10"/><text x="145" y="64" text-anchor="middle">dim_clientes</text><text class="sub" x="145" y="84" text-anchor="middle">filial | código | loja · nome fantasia</text></g>
+              <g class="no dim"><rect x="30" y="130" width="230" height="58" rx="10"/><text x="145" y="154" text-anchor="middle">dim_segmentacoes</text><text class="sub" x="145" y="174" text-anchor="middle">nomenclatura oficial</text></g>
+              <g class="no dim"><rect x="30" y="220" width="230" height="58" rx="10"/><text x="145" y="244" text-anchor="middle">dim_redes</text><text class="sub" x="145" y="264" text-anchor="middle">lojas de uma mesma rede</text></g>
+              <g class="no dim"><rect x="30" y="310" width="230" height="58" rx="10"/><text x="145" y="334" text-anchor="middle">dim_filiais</text><text class="sub" x="145" y="354" text-anchor="middle">de-para fixo</text></g>
+              <g class="no dim"><rect x="30" y="400" width="230" height="58" rx="10"/><text x="145" y="424" text-anchor="middle">dim_demonstradoras</text><text class="sub" x="145" y="444" text-anchor="middle">código, CPF, nome</text></g>
+              <g class="no dim"><rect x="700" y="40" width="230" height="58" rx="10"/><text x="815" y="64" text-anchor="middle">dim_produtos</text><text class="sub" x="815" y="84" text-anchor="middle">SKU · GTIN · lançamento</text></g>
+              <g class="no dim"><rect x="700" y="130" width="230" height="58" rx="10"/><text x="815" y="154" text-anchor="middle">dim_categorias</text><text class="sub" x="815" y="174" text-anchor="middle">linha = categoria</text></g>
+              <g class="no dim"><rect x="700" y="220" width="230" height="58" rx="10"/><text x="815" y="244" text-anchor="middle">dim_vendedores</text><text class="sub" x="815" y="264" text-anchor="middle">histórico vem do fato</text></g>
+              <g class="no dim"><rect x="700" y="310" width="230" height="58" rx="10"/><text x="815" y="334" text-anchor="middle">dim_periodos</text><text class="sub" x="815" y="354" text-anchor="middle">37 meses · mês parcial</text></g>
+              <g class="no apoio"><rect x="700" y="400" width="230" height="58" rx="10"/><text x="815" y="424" text-anchor="middle">controle_cargas</text><text class="sub" x="815" y="444" text-anchor="middle">lotes · histórico · desfazer</text></g>
+              <g class="no fato"><rect x="365" y="110" width="230" height="64" rx="10"/><text x="480" y="136" text-anchor="middle">fato_faturamento_produto</text><text class="sub" x="480" y="157" text-anchor="middle">dia × cliente × vendedor × SKU</text></g>
+              <g class="no fato"><rect x="365" y="220" width="230" height="64" rx="10"/><text x="480" y="246" text-anchor="middle">fato_pedidos_cliente</text><text class="sub" x="480" y="267" text-anchor="middle">dia × cliente × vendedor</text></g>
+              <g class="no fato"><rect x="365" y="330" width="230" height="64" rx="10"/><text x="480" y="356" text-anchor="middle">evento_compra_mix</text><text class="sub" x="480" y="377" text-anchor="middle">produtos de cada compra</text></g>
+              <g class="no apoio"><rect x="365" y="460" width="230" height="58" rx="10"/><text x="480" y="484" text-anchor="middle">agendas (ZVX × ZVY)</text><text class="sub" x="480" y="504" text-anchor="middle">loja × demonstradora × mês</text></g>
+            </svg>
+            <figcaption>Vermelho: fatos. Verde: dimensões. Tracejado: apoio. Clientes se desdobram em segmentação, rede e filial; produtos em categoria.</figcaption>
+          </figure>
+          <div class="grade g3 revelar">
+            <div class="cartao vermelho"><h4>fato_faturamento_produto</h4><p>Peças, peças pagas (sem bonificação) e valor. É a fonte de faturamento por produto, categoria, preço médio e reajuste.</p></div>
+            <div class="cartao vermelho"><h4>fato_pedidos_cliente</h4><p>A única tabela em que pedidos podem ser somados. Daqui saem os pedidos e o ticket médio por pedido.</p></div>
+            <div class="cartao vermelho"><h4>evento_compra_mix</h4><p>Liga os produtos à compra do dia (filial + cliente + loja + vendedor + data), para analisar mix e penetração de categorias.</p></div>
+          </div>
+        </section>
+
+        <!-- 06 -->
+        <section class="capitulo" id="c06">
+          <span class="rotulo-cap">06 · O banco de dados</span>
+          <h2>MongoDB Atlas como camada analítica.</h2>
+          <p>Escolhemos o MongoDB Atlas pela facilidade de operar na nuvem sem servidor de banco próprio e pela carga em lote (<em>bulk</em>) rápida. As coleções seguem o modelo estrela, com índices pelas chaves de negócio e pelos campos de data. Além das tabelas analíticas, o banco guarda o que dá <strong>segurança operacional</strong> ao processo:</p>
+          <div class="grade g3 revelar">
+            <div class="cartao"><span class="num">controle_cargas</span><h4>Cada carga é um lote</h4><p>Registra o que foi recebido, aceito e rejeitado, a janela de meses e o status de publicação.</p></div>
+            <div class="cartao"><span class="num">historico_importacoes</span><h4>Histórico com desfazer</h4><p>Quem importou, quando, quanto tempo levou, o pico de memória de cada etapa e o botão para desfazer a última importação.</p></div>
+            <div class="cartao"><span class="num">usuarios_importacao</span><h4>Acesso protegido</h4><p>Senhas com <em>scrypt</em> e sal, bloqueio após 5 tentativas e redefinição por e-mail com link de uso único.</p></div>
+          </div>
+          <p>A carga nunca substitui a versão publicada antes de passar pela validação. Se uma base vier fora do padrão, o painel continua com a carga anterior, e quem importou recebe uma mensagem em linguagem simples, como “Arquivo aberto em outro programa” ou “O arquivo de clientes parece fora do padrão”, em vez de um erro técnico.</p>
+        </section>
+
+        <!-- 07 -->
+        <section class="capitulo" id="c07">
+          <span class="rotulo-cap">07 · Backend e carga</span>
+          <h2>Onze etapas, um botão.</h2>
+          <p>O backend é Node.js puro, sem framework: um servidor HTTP e scripts de carga com uma responsabilidade cada. Quem importa só escolhe os arquivos no navegador. O servidor valida as colunas, decide entre <strong>carga rápida</strong> (só cadastros auxiliares, cerca de 3 minutos) e <strong>carga completa</strong> (fatos, cerca de 20 minutos), roda as etapas e mostra o andamento. Tempos e picos de memória medidos numa carga real:</p>
+          <div class="legenda-etapas"><span></span><span>Etapa</span><span>Tempo</span><span>Memória</span></div>
+          <div class="etapas revelar">
+            <div class="etapa"><div><h4>Tratar clientes (SA1)</h4><p>exclusões, duplicados, relatórios de motivo</p></div><div><div class="barra"><i style="--w:2%"></i></div><small>5 s</small></div><div><div class="barra mem"><i style="--w:23%"></i></div><small>234 MB</small></div></div>
+            <div class="etapa"><div><h4>Tratar vendedores (SA3)</h4><p>situação e código padronizado</p></div><div><div class="barra"><i style="--w:1%"></i></div><small>&lt; 1 s</small></div><div><div class="barra mem"><i style="--w:4%"></i></div><small>41 MB</small></div></div>
+            <div class="etapa"><div><h4>Consolidar clientes e vendedores</h4><p>carteira atual e cadastro completo</p></div><div><div class="barra"><i style="--w:1%"></i></div><small>2 s</small></div><div><div class="barra mem"><i style="--w:12%"></i></div><small>123 MB</small></div></div>
+            <div class="etapa"><div><h4>Produtos, categorias e agendas</h4><p>GTIN, categoria, demonstradoras</p></div><div><div class="barra"><i style="--w:2%"></i></div><small>6 s</small></div><div><div class="barra mem"><i style="--w:18%"></i></div><small>183 MB</small></div></div>
+            <div class="etapa"><div><h4>Filiais</h4><p>de-para fixo</p></div><div><div class="barra"><i style="--w:1%"></i></div><small>1 s</small></div><div><div class="barra mem"><i style="--w:4%"></i></div><small>41 MB</small></div></div>
+            <div class="etapa"><div><h4>Dimensões no banco</h4><p>upsert sem trocar identificadores</p></div><div><div class="barra"><i style="--w:11%"></i></div><small>2 min</small></div><div><div class="barra mem"><i style="--w:14%"></i></div><small>145 MB</small></div></div>
+            <div class="etapa"><div><h4>Fatos no banco</h4><p>unificação de clientes, janela de 37 meses, bulk write</p></div><div><div class="barra"><i style="--w:100%"></i></div><small>17,5 min</small></div><div><div class="barra mem"><i style="--w:92%"></i></div><small>951 MB</small></div></div>
+            <div class="etapa"><div><h4>Auditar exclusões</h4><p>tudo que não entrou tem motivo</p></div><div><div class="barra"><i style="--w:1%"></i></div><small>6 s</small></div><div><div class="barra mem"><i style="--w:9%"></i></div><small>92 MB</small></div></div>
+            <div class="etapa"><div><h4>Conferir com o faturamento oficial</h4><p>mês a mês e cliente a cliente</p></div><div><div class="barra"><i style="--w:3%"></i></div><small>35 s</small></div><div><div class="barra mem"><i style="--w:8%"></i></div><small>82 MB</small></div></div>
+            <div class="etapa"><div><h4>Gerar o pacote do painel</h4><p>dimensões + vetores binários</p></div><div><div class="barra"><i style="--w:8%"></i></div><small>1,4 min</small></div><div><div class="barra mem"><i style="--w:52%"></i></div><small>534 MB</small></div></div>
+            <div class="etapa"><div><h4>Validar o pacote</h4><p>totais e estrutura antes de publicar</p></div><div><div class="barra"><i style="--w:1%"></i></div><small>5 s</small></div><div><div class="barra mem"><i style="--w:11%"></i></div><small>115 MB</small></div></div>
+          </div>
+          <div class="par-codigo revelar">
+            <div>
+              <h3>Unificação de clientes</h3>
+              <p>A regra “um cliente é um nome fantasia” resolve lojas que trocam de CNPJ e cadastros repetidos entre filiais. Cada grupo fica com o cadastro da compra mais recente, para valer o cadastro atual (cidade, segmentação e vendedor).</p>
+            </div>
+<pre><code><span class="c">// Mesmo nome fantasia = mesmo cliente, em qualquer filial.</span>
+<span class="k">const</span> chave = (nome) =&gt; nome.normalize(<span class="s">"NFD"</span>)
+  .replace(<span class="s">/[̀-ͯ]/g</span>, <span class="s">""</span>)
+  .replace(<span class="s">/[^A-Za-z0-9]/g</span>, <span class="s">""</span>).toUpperCase();
+
+<span class="k">for</span> (<span class="k">const</span> [cadastro, nome] <span class="k">of</span> nomeDoCadastro)
+  <span class="f">unir</span>(cadastro, <span class="s">`nome:${chave(nome)}`</span>);
+
+<span class="c">// Cada grupo usa o cadastro da compra mais recente.</span>
+<span class="k">const</span> principal = grupo.sort(porUltimaCompra)[0];</code></pre>
+          </div>
+        </section>
+
+        <!-- 08 -->
+        <section class="capitulo" id="c08">
+          <span class="rotulo-cap">08 · Front-end</span>
+          <h2>Um painel feito do zero, que calcula no navegador.</h2>
+          <p>Nenhuma biblioteca de gráficos, nenhum framework. O servidor entrega um pacote com as dimensões e os fatos em <strong>vetores binários</strong> (inteiros em base64). Mais de um milhão de linhas de faturamento cabem em poucos megabytes, e o <strong>motor de cálculo</strong> no navegador recalcula todos os indicadores a cada filtro, sem ida ao servidor.</p>
+          <div class="par-codigo revelar">
+<pre><code><span class="c">// Exportação: cada coluna do fato vira um vetor tipado.</span>
+<span class="k">const</span> F = {
+  p:   <span class="k">new</span> <span class="f">Uint8Array</span>(n),   <span class="c">// período</span>
+  c:   <span class="k">new</span> <span class="f">Uint16Array</span>(n),  <span class="c">// cliente</span>
+  pr:  <span class="k">new</span> <span class="f">Uint16Array</span>(n),  <span class="c">// produto</span>
+  val: <span class="k">new</span> <span class="f">Int32Array</span>(n),   <span class="c">// valor em centavos</span>
+};
+
+<span class="c">// No navegador: decodifica uma vez, recalcula a cada clique.</span>
+<span class="k">const</span> val = <span class="k">new</span> <span class="f">Int32Array</span>(bytes(D.fato.val).buffer);</code></pre>
+            <div>
+              <h3>O que o motor entrega</h3>
+              <p>Situação de cada cliente, ponte do crescimento (ganhos e perdas por situação), penetração de categorias, reajuste por SKU, carteira por vendedor, ranking de estados e o detalhe dia a dia de um cliente.</p>
+              <p>Tudo com comparação automática contra o mesmo período do ano anterior, ou contra o período imediatamente anterior.</p>
+            </div>
+          </div>
+          <div class="galeria revelar">
+            <figure><img src="assets/painel-composicao.jpg" alt="Composição do crescimento: duas roscas com ganhos e perdas por situação do cliente e tabela de contribuição" loading="lazy" width="1440" height="760"><figcaption>Composição do crescimento: ganhos e perdas por situação do cliente.</figcaption></figure>
+            <figure><img src="assets/painel-estados.jpg" alt="Mapa do Brasil colorido por crescimento e ranking dos estados por faturamento" loading="lazy" width="1440" height="820"><figcaption>Mapa e ranking dos estados. O clique num estado filtra a página.</figcaption></figure>
+            <figure><img src="assets/painel-produtos.jpg" alt="Reajuste de preço por categoria e evolução mensal do reajuste" loading="lazy" width="1440" height="820"><figcaption>Reajuste de preço separado de volume e mix.</figcaption></figure>
+            <figure><img src="assets/painel-clientes.jpg" alt="Penetração das categorias nos clientes com compra, em anéis por categoria" loading="lazy" width="1440" height="820"><figcaption>Penetração das categorias e oportunidade por categoria.</figcaption></figure>
+          </div>
+        </section>
+
+        <!-- 09 -->
+        <section class="capitulo" id="c09">
+          <span class="rotulo-cap">09 · Ajustes de layout</span>
+          <h2>Iterar com quem usa.</h2>
+          <p>O painel foi construído em ciclos curtos com a área comercial, com uma rodada de ajustes por sessão. Cada pedido virou um padrão de interface aplicado em todas as telas, e não um remendo pontual. Algumas mudanças:</p>
+          <div class="revelar">
+            <div class="mudanca"><div class="antes"><b>Antes</b>Valores abreviados (“R$ 58,6 mi”) que não batiam com o relatório oficial.</div><div class="seta">→</div><div class="depois"><b>Depois</b>Valores sempre completos em rótulos, balões, roscas e tabelas; só a escala dos eixos é abreviada.</div></div>
+            <div class="mudanca"><div class="antes"><b>Antes</b>Balão de gráfico em forma de lista, cada um diferente do outro.</div><div class="seta">→</div><div class="depois"><b>Depois</b>Balão no formato dos cartões: total, divisão (clientes válidos e outros), ano anterior em cinza e variação no rodapé.</div></div>
+            <div class="mudanca"><div class="antes"><b>Antes</b>Filtro aplicado por clique ficava invisível, e o clique trocava de aba.</div><div class="seta">→</div><div class="depois"><b>Depois</b>O clique filtra a página atual; os filtros se acumulam como selos com ×, e um botão limpa todos.</div></div>
+            <div class="mudanca"><div class="antes"><b>Antes</b>Cartões de indicadores desalinhados quando um texto quebrava linha.</div><div class="seta">→</div><div class="depois"><b>Depois</b>Grade com <em>subgrid</em>: topo, detalhe, ano anterior e variação sempre na mesma altura.</div></div>
+            <div class="mudanca"><div class="antes"><b>Antes</b>Tabela com mais de 8 mil linhas levava cerca de 1 s para abrir a aba.</div><div class="seta">→</div><div class="depois"><b>Depois</b>Tabela virtual: só as linhas visíveis são desenhadas. A aba abre em cerca de 0,3 s, com busca, ordenação e CSV intactos.</div></div>
+            <div class="mudanca"><div class="antes"><b>Antes</b>Ticket médio por produto com 2 casas escondia variações reais de preço.</div><div class="seta">→</div><div class="depois"><b>Depois</b>4 casas decimais no ticket por produto, a pedido da área comercial.</div></div>
+          </div>
+          <figure class="revelar"><img src="assets/painel-tema-claro.jpg" alt="Painel no tema claro" loading="lazy" width="1440" height="900"><figcaption>Tema claro e escuro, com a escolha lembrada entre as visitas.</figcaption></figure>
+        </section>
+
+        <!-- 10 -->
+        <section class="capitulo" id="c10">
+          <span class="rotulo-cap">10 · Validação</span>
+          <h2>Bater no centavo, ou explicar a diferença.</h2>
+          <p>A validação foi tratada como entrega, não como etapa final. Cada visão foi comparada com o relatório oficial ou com o BI, linha a linha, nos 37 meses. As diferenças encontradas renderam algumas das melhores decisões do projeto:</p>
+          <div class="tabela-rolagem revelar">
+            <table class="tabela">
+              <thead><tr><th>O que validamos</th><th>Contra</th><th>Resultado</th><th>O que aprendemos</th></tr></thead>
+              <tbody>
+                <tr><td>Faturamento por mês e por vendedor</td><td>Relatório oficial</td><td class="ok">Bate</td><td>Diferenças no mês corrente vinham só de extrações feitas em horários diferentes.</td></tr>
+                <tr><td>Pedidos</td><td>BI</td><td class="ok">Bate</td><td>O BI contava o número do pedido, que se repete entre filiais. O certo é filial + número, e a referência correta era a soma com a filial nas linhas, não o total consolidado.</td></tr>
+                <tr><td>Segmentação e estados</td><td>Relatório oficial</td><td class="ok">Bate</td><td>As diferenças por estado vinham de nomes fantasia repetidos em estados diferentes. A correção foi no cadastro, e a regra continuou simples.</td></tr>
+                <tr><td>Categorias e produtos</td><td>BI</td><td class="ok">Bate</td><td>Todos os SKUs batem em valor e quantidade; só o nome de uma categoria técnica difere.</td></tr>
+                <tr><td>Clientes que mais cresceram e caíram</td><td>Base bruta</td><td class="ok">Bate</td><td>Conferidos cliente a cliente a partir das extrações originais.</td></tr>
+                <tr><td>Lojas com demonstradora</td><td>BI</td><td class="alerta">Decisão</td><td>O BI ligava demonstradoras até a devoluções de lojas sem agenda. A área comercial escolheu a agenda como fonte da verdade, e a divergência ficou documentada.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="destaque revelar">Validar não é provar que o painel está certo. É descobrir onde as fontes discordam e deixar a decisão com quem entende do negócio.</p>
+        </section>
+
+        <!-- 11 -->
+        <section class="capitulo" id="c11">
+          <span class="rotulo-cap">11 · Implantação 24/7</span>
+          <h2>No ar o dia inteiro, por US$ 11 por mês.</h2>
+          <p>O painel saiu de um servidor local para a nuvem, com três requisitos: acesso só por link (sem login no painel), importação das bases de qualquer computador e nenhum dado da empresa no repositório de código.</p>
+          <div class="arquitetura revelar">
+            <div class="caixa"><span class="tag">GitHub privado</span><b>Só código</b><ul><li>bases, planilhas e senhas fora do repositório</li><li>cada push publica sozinho</li></ul></div>
+            <div class="seta">→</div>
+            <div class="caixa"><span class="tag">Koyeb · 2 GB</span><b>Servidor Node.js</b><ul><li>link secreto: sem a chave, tudo dá 404</li><li>importação com login e envio compactado</li><li>carga completa no próprio servidor</li></ul></div>
+            <div class="seta">⇄</div>
+            <div class="caixa"><span class="tag">MongoDB Atlas</span><b>Dados e espelho</b><ul><li>fatos e dimensões</li><li>bases e pacote do painel espelhados (GridFS, gzip)</li></ul></div>
+          </div>
+          <div class="grade g2 revelar">
+            <div class="cartao azul"><h4>Disco que some a cada deploy</h4><p>O servidor da nuvem começa vazio a cada publicação. As bases e o pacote do painel ficam espelhados no Atlas, compactados (601 MB viram 49 MB). Ao iniciar, o servidor baixa o que falta; ao fim de cada carga, envia o que mudou.</p></div>
+            <div class="cartao ambar"><h4>Máquina medida, não estimada</h4><p>Cada etapa da carga registra o próprio pico de memória. A carga dos fatos chegou a cerca de 1 GB. Testamos uma máquina de 1 GB com memória limitada, ela falhou, e a escolha foi a de 2 GB, com folga para a base crescer.</p></div>
+            <div class="cartao verde"><h4>23 MB que viraram 3,3 MB</h4><p>O pacote do painel vai compactado e com ETag. Na segunda visita, sem carga nova, o navegador não baixa nada: recebe só “não mudou” (304).</p></div>
+            <div class="cartao violeta"><h4>Link secreto sem login</h4><p>O painel só responde em <code>/&lt;chave&gt;/</code>. Fora dela, qualquer endereço dá “Não encontrado”. Os cabeçalhos impedem indexação e vazamento da chave pelo Referer. Se o link vazar, basta trocar a chave.</p></div>
+          </div>
+<pre class="revelar"><code><span class="c">// Sem a chave no caminho, o servidor não revela nem que existe.</span>
+<span class="k">if</span> (chaveAcesso) {
+  <span class="k">const</span> prefixo = <span class="s">`/${chaveAcesso}`</span>;
+  <span class="k">if</span> (!rota.startsWith(<span class="s">`${prefixo}/`</span>)) <span class="k">return</span> <span class="f">naoEncontrado</span>(response);
+  rota = rota.slice(prefixo.length);
+}</code></pre>
+        </section>
+
+        <!-- 12 -->
+        <section class="capitulo" id="c12">
+          <span class="rotulo-cap">12 · Esta versão</span>
+          <h2>O mesmo painel, com uma empresa que não existe.</h2>
+          <p>Esta versão de portfólio roda inteira no GitHub Pages, sem banco e sem servidor. O <strong>código do painel é o mesmo</strong> da versão em produção. Só o pacote de dados foi trocado por uma base fictícia, criada por um gerador próprio para a <em>Aurora Cosméticos Profissionais</em>, uma indústria inventada.</p>
+          <div class="grade g4 revelar">
+            <div class="cartao"><span class="num">CLIENTES</span><h4>1.822 cadastros</h4><p>Redes com várias lojas, mesma loja com CNPJ novo, funcionários e cadastros inválidos.</p></div>
+            <div class="cartao"><span class="num">VENDAS</span><h4>169 mil linhas</h4><p>37 meses com sazonalidade, reajustes anuais, bonificações e devoluções.</p></div>
+            <div class="cartao"><span class="num">CICLO DE VIDA</span><h4>Clientes vivos</h4><p>Novos, perdidos, reativados e troca de carteira entre vendedores.</p></div>
+            <div class="cartao"><span class="num">CAMPO</span><h4>46 demonstradoras</h4><p>Agendas mensais que aumentam a compra das lojas atendidas.</p></div>
+          </div>
+          <p>O gerador usa uma semente fixa (o resultado é sempre o mesmo) e grava o pacote no formato exato que o pipeline real exporta do banco. Por isso todos os filtros, cliques, mapas, tabelas, a exportação em CSV e o tema funcionam como na produção. Nenhum nome, CNPJ, cliente, vendedor ou valor vem de dados reais.</p>
+          <h3>Tecnologias</h3>
+          <div class="pilulas">
+            <span>Node.js 22</span><span>JavaScript sem framework</span><span>SVG próprio (sem biblioteca de gráficos)</span><span>MongoDB Atlas</span><span>GridFS</span><span>TOTVS Protheus</span><span>BI corporativo</span><span>Koyeb</span><span>GitHub</span><span>Puppeteer (testes de tela)</span><span>ExcelJS</span>
+          </div>
+
+          <div class="encerramento revelar">
+            <span class="rotulo-cap">Experimente</span>
+            <h2>Clique em qualquer número e veja a página inteira responder.</h2>
+            <p class="texto">Sugestão de roteiro: na Visão geral, clique em “Clientes perdidos”, depois num estado do mapa, e abra a aba Análise por cliente. Os filtros vão junto, como selos no topo.</p>
+            <div class="acoes"><a class="btn primario" href="painel/">Abrir o painel →</a><a class="btn" href="https://github.com/lariantunez/Diagnostico-Comercial">Ver o código</a></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span><strong>Larissa Antunez</strong> · Analytics &amp; Desenvolvimento</span>
+      <span>Projeto real em produção · versão de portfólio com dados fictícios</span>
+    </div>
+  </footer>
+  <script src="assets/estudo.js"></script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Diagnóstico Comercial · Demonstração</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div class="viz-root">
+    <header class="topo">
+      <div class="acoes-topo"><a class="btn" id="abrir-importacao" href="../index.html">← Estudo de caso</a><button class="tema-switch" id="tema" type="button" role="switch" aria-label="Tema escuro" title="Alternar tema claro/escuro"><span class="tema-icone sol"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg></span><span class="tema-icone lua"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"/></svg></span><span class="tema-bola"></span></button></div>
+    </header>
+
+    <section class="filtros" id="filtros" aria-label="Filtros">
+      <div class="filtro" id="f-periodo"></div>
+      <div class="filtro" id="f-nome-fantasia"></div>
+      <div class="filtro" id="f-canal"></div>
+      <div class="filtro" id="f-regiao"></div>
+      <div class="filtro" id="f-uf"></div>
+      <div class="filtro" id="f-vendedor"></div>
+      <div class="filtro" id="f-familia"></div>
+      <div class="filtro" id="f-categoria"></div>
+      <div class="filtro acoes"><button class="btn ghost" id="limpar" type="button">Limpar filtros</button></div>
+    </section>
+
+    <nav class="abas" id="abas" role="tablist"></nav>
+    <main id="conteudo" tabindex="-1"><p class="carregando">Carregando…</p></main>
+
+    <div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+  </div>
+
+  <script src="dados/dados.js"></script>
+  <script src="js/formato.js"></script>
+  <script src="js/motor.js"></script>
+  <script src="js/mapa-brasil.js"></script>
+  <script src="js/graficos.js"></script>
+  <script src="js/componentes.js"></script>
+  <script src="js/telas.js"></script>
+  <script src="js/app.js"></script></body>
+</html>
