@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="../assets/idioma-estudo.js"></script>
+  <link rel="alternate" hreflang="pt-BR" href="https://lariantunez.github.io/Diagnostico-Comercial/">
+  <link rel="alternate" hreflang="en" href="https://lariantunez.github.io/Diagnostico-Comercial/en/">
+  <link rel="alternate" hreflang="es" href="https://lariantunez.github.io/Diagnostico-Comercial/es/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sales Diagnostics · Case study</title>
+  <meta name="description" content="Case study: from ERP to a 24/7 sales dashboard. Source discovery, fact/dimension modeling, database, backend, front-end, validation, and deployment. Fictional data.">
+  <meta property="og:title" content="Sales Diagnostics · from ERP to a 24/7 dashboard">
+  <meta property="og:description" content="Complete case study of a sell-in dashboard: modeling, pipeline, front-end, validation, and deployment.">
+  <meta property="og:image" content="../assets/painel-visao-geral.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/estudo.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="wrap">
+      <a class="marca" href="#inicio"><i></i>Sales Diagnostics</a>
+      <nav>
+        <a class="opcional" href="https://lariantunez.github.io/Vitrine-de-projetos/?lang=en">Portfolio</a>
+        <a class="opcional" href="#c00">Case study</a>
+        <a class="opcional" href="https://github.com/lariantunez/Diagnostico-Comercial">Code</a>
+        <a href="../painel/">Open dashboard</a>
+        <div class="idiomas" role="group" aria-label="Language"><a href="../?lang=pt" data-idioma="pt" hreflang="pt-BR">PT</a><a href="./" data-idioma="en" hreflang="en" aria-current="true">EN</a><a href="../es/" data-idioma="es" hreflang="es">ES</a></div>
+        <button class="btn-tema" id="tema" type="button" aria-label="Toggle theme">☀</button>
+      </nav>
+      <span class="progresso"></span>
+    </div>
+  </header>
+
+  <main id="inicio">
+    <section class="abertura">
+      <div class="wrap">
+        <span class="selo-topo"><b>●</b> Project in production · portfolio version with fictional data</span>
+        <h1>From ERP to a <em>24/7</em> dashboard.</h1>
+        <p class="lead">How we turned twelve loose extracts from an ERP and a BI tool into a reliable sales diagnostic: fact/dimension modeling, a cloud database, a load pipeline, an interactive dashboard built from scratch, number-by-number validation against the official source, and a deployment that runs around the clock.</p>
+        <div class="acoes">
+          <a class="btn primario" href="../painel/">Explore the dashboard →</a>
+          <a class="btn" href="#c00">Read the case study</a>
+        </div>
+        <div class="numeros">
+          <div><strong>37</strong><span>months of history, in a rolling window</span></div>
+          <div><strong>12</strong><span>source datasets (ERP + BI)</span></div>
+          <div><strong>11</strong><span>automated load steps</span></div>
+          <div><strong>5</strong><span>analytical views in the dashboard</span></div>
+          <div><strong>24/7</strong><span>online, with imports from the browser</span></div>
+        </div>
+        <figure class="vitrine">
+          <div class="barra-janela"><i></i><i></i><i></i><span>painel/ · Overview (fictional data)</span></div>
+          <img src="../assets/painel-visao-geral.jpg" alt="Dashboard overview: filters at the top, cards for customers, revenue, orders, and tickets compared with the previous year" width="1440" height="900">
+        </figure>
+      </div>
+    </section>
+
+    <div class="wrap livro">
+      <aside class="indice" aria-label="Chapters">
+        <p>Chapters</p>
+        <ol>
+          <li><a href="#c00"><b>00</b>The challenge</a></li>
+          <li><a href="#c01"><b>01</b>Principles</a></li>
+          <li><a href="#c02"><b>02</b>Where the data lives</a></li>
+          <li><a href="#c03"><b>03</b>Table flowchart</a></li>
+          <li><a href="#c04"><b>04</b>Structure and rules</a></li>
+          <li><a href="#c05"><b>05</b>Facts and dimensions</a></li>
+          <li><a href="#c06"><b>06</b>The database</a></li>
+          <li><a href="#c07"><b>07</b>Backend and loading</a></li>
+          <li><a href="#c08"><b>08</b>Front-end</a></li>
+          <li><a href="#c09"><b>09</b>Layout adjustments</a></li>
+          <li><a href="#c10"><b>10</b>Validation</a></li>
+          <li><a href="#c11"><b>11</b>24/7 deployment</a></li>
+          <li><a href="#c12"><b>12</b>This version</a></li>
+        </ol>
+      </aside>
+
+      <div class="capitulos">
+        <!-- 00 -->
+        <section class="capitulo" id="c00">
+          <span class="rotulo-cap">00 · The challenge</span>
+          <h2>Plenty of reports, no diagnosis.</h2>
+          <p>The sales team of a professional cosmetics manufacturer sells to distributors, perfumery chains, stores, salons, and pharmacies across the country. The data existed, but it was scattered: master data in the ERP, sales in BI reports, demonstrator schedules in custom tables, and an official revenue report used by the executive team. Every question became a new spreadsheet, and two spreadsheets rarely gave the same number.</p>
+          <p class="destaque revelar">“Who bought, who stopped, who grew, why, and where?”, answered in one place, with a number that matches the official one.</p>
+          <div class="grade g3 revelar">
+            <div class="cartao azul"><span class="num">CUSTOMER BASE</span><h4>Who is buying?</h4><p>Active, new, reactivated, and lost customers (12 months without buying), plus who grew or declined compared with the previous year.</p></div>
+            <div class="cartao verde"><span class="num">GROWTH</span><h4>Where did the result come from?</h4><p>Growth broken down by customer status, segment, state, sales rep, category, and the effect of price increases.</p></div>
+            <div class="cartao ambar"><span class="num">ACTION</span><h4>Where to act?</h4><p>Category penetration across customers, opportunities, stores with a demonstrator, and each sales rep's accounts, down to day-by-day detail.</p></div>
+          </div>
+        </section>
+
+        <!-- 01 -->
+        <section class="capitulo" id="c01">
+          <span class="rotulo-cap">01 · Principles</span>
+          <h2>Before the code, the philosophy.</h2>
+          <p>We agreed on a short set of principles with the business team. They settled dozens of discussions later on: whenever a question came up, the answer was already written down.</p>
+          <div class="grade g2 revelar">
+            <div class="cartao"><span class="num">01</span><h4>The business sets the rule; the data follows</h4><p>Every rule (what counts as an active, lost, or new customer; what counts as an order) was defined by the sales team, documented, and applied the same way across the whole system.</p></div>
+            <div class="cartao"><span class="num">02</span><h4>All revenue counts</h4><p>Nothing is silently discarded. A product without master data becomes “unclassified”; returns come in with a negative sign; employees count toward the total, but not as customers.</p></div>
+            <div class="cartao"><span class="num">03</span><h4>A customer is a trade name</h4><p>Same trade name = same customer, in any branch and even with a new CNPJ (Brazilian company ID). When they really are different companies, the fix is made at the source (the master record), not with an exception in the code.</p></div>
+            <div class="cartao"><span class="num">04</span><h4>No number without a cross-check</h4><p>Every view was validated against the official report before release. Any difference found gets a written explanation or a fix.</p></div>
+            <div class="cartao"><span class="num">05</span><h4>From macro to micro</h4><p>The page tells a top-down story: headline indicators → customer base movement → growth breakdown → segments → states → sales reps → products.</p></div>
+            <div class="cartao"><span class="num">06</span><h4>Every number is a filter</h4><p>Clicking any bar, slice, state, row, or card filters the whole page. Filters stack up, show as badges, and clear with one click.</p></div>
+          </div>
+        </section>
+
+        <!-- 02 -->
+        <section class="capitulo" id="c02">
+          <span class="rotulo-cap">02 · Where the data lives</span>
+          <h2>Mapping the sources inside the system.</h2>
+          <p>The first deliverable was not code: it was an <strong>inventory</strong>. For each business question, we located the table that answers it in the ERP (TOTVS Protheus) or in the BI tool, understood its <strong>grain</strong> (what one row represents), and noted each one's pitfall. Those pitfalls became the rules in chapter 04.</p>
+          <div class="tabela-rolagem revelar">
+            <table class="tabela">
+              <thead><tr><th>Source</th><th>Where it lives</th><th>What it contains</th><th>Pitfall found</th></tr></thead>
+              <tbody>
+                <tr><td>Customers <code>SA1</code></td><td>ERP</td><td>Branch, code, store, CNPJ, trade name, segment, current sales rep</td><td>Employees with a CPF (individual ID), test records, duplicates, and the same store under a changed CNPJ</td></tr>
+                <tr><td>Sales reps <code>SA3</code></td><td>ERP</td><td>Code, name, and status</td><td>The current rep on the master record is not the rep on the sale: history comes from the fact table</td></tr>
+                <tr><td>Products <code>SB1</code></td><td>ERP</td><td>Code, description, type, GTIN</td><td>A product invoiced outside the valid master data cannot disappear from revenue</td></tr>
+                <tr><td>Groups <code>SBM</code></td><td>ERP</td><td>Category (product line) of each product</td><td>A product without a group needs an explicit category</td></tr>
+                <tr><td>Schedules <code>ZVX</code> / <code>ZVY</code></td><td>ERP (custom tables)</td><td>Monthly schedule of each demonstrator and the stores they cover</td><td>A generic schedule belonging to the company itself is not a demonstrator and must not count</td></tr>
+                <tr><td>Revenue by product</td><td>BI</td><td>Day × customer × sales rep × product: quantity, price excluding free goods, value</td><td>The order count repeats on every product row: summing it double-counts</td></tr>
+                <tr><td>Orders by customer</td><td>BI</td><td>Day × customer × sales rep: order count and revenue</td><td>The only source where orders can be summed</td></tr>
+                <tr><td>Sell-in</td><td>BI</td><td>Month × product × customer</td><td>Defines each product's launch date (first sale)</td></tr>
+                <tr><td>Branches and demonstrators</td><td>BI (dimensions)</td><td>Branch names; demonstrators' CPF and name</td><td>They complement master data, but do not decide who received a visit</td></tr>
+                <tr><td>Official revenue</td><td>ERP (report)</td><td>The number the executive team uses</td><td>Does not feed the dashboard: it is the yardstick for validating every load</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 03 -->
+        <section class="capitulo" id="c03">
+          <span class="rotulo-cap">03 · Table flowchart</span>
+          <h2>A single path, from extract to click.</h2>
+          <p>We drew the flow before writing the first line of load code. Each source goes through a processing step with a single responsibility, becomes a dimension or fact in the database, and reaches the browser in a compact package. No screen reads a raw file.</p>
+          <div class="fluxo revelar" role="img" aria-label="Flow: ERP and BI sources, processing, database with dimensions and facts, dashboard package, and dashboard">
+            <div class="coluna"><b>1 · Sources</b>
+              <div class="item erp">SA1 · SA3 · SB1 · SBM<small>ERP master data</small></div>
+              <div class="item erp">ZVX · ZVY<small>demonstrator schedules</small></div>
+              <div class="item bi">Revenue × product<small>day, customer, sales rep, SKU</small></div>
+              <div class="item bi">Orders × customer · Sell-in<small>orders and launch</small></div>
+              <div class="item bi">Branches · Demonstrators<small>BI dimensions</small></div>
+              <div class="item adv">Official revenue<small>validation yardstick</small></div>
+            </div>
+            <div class="seta">→</div>
+            <div class="coluna"><b>2 · Processing</b>
+              <div class="item">Customers<small>exclusions, duplicates, merging</small></div>
+              <div class="item">Sales reps<small>status and accounts</small></div>
+              <div class="item">Products and schedules<small>category, GTIN, launch</small></div>
+              <div class="item">Branches<small>fixed mapping</small></div>
+              <div class="item">Exclusion reports<small>everything removed has a reason</small></div>
+            </div>
+            <div class="seta">→</div>
+            <div class="coluna"><b>3 · Database</b>
+              <div class="item dim">9 dimensions<small>customers, products, sales reps, periods…</small></div>
+              <div class="item fato">2 facts + 1 event<small>revenue, orders, purchase mix</small></div>
+              <div class="item">Control<small>loads, history, users</small></div>
+            </div>
+            <div class="seta">→</div>
+            <div class="coluna"><b>4 · Dashboard</b>
+              <div class="item">Binary package<small>base64 vectors</small></div>
+              <div class="item">In-browser engine<small>recalculates on every filter</small></div>
+              <div class="item">5 views<small>overview, customers, products, team, geography</small></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 04 -->
+        <section class="capitulo" id="c04">
+          <span class="rotulo-cap">04 · Structure and rules</span>
+          <h2>Clean without losing anything: every exclusion has a reason.</h2>
+          <p>The customer master data is the heart of the diagnostic, and also the messiest source. The processing step separates what is a customer from what is not, without deleting anything: every record left out goes into a report with its reason and stays visible in the dashboard, in the “Cadastro geral” (full registry) table. Below is the funnel with the numbers from this version's fictional dataset:</p>
+          <div class="funil revelar">
+            <div style="--w:100%"><span>Records read from SA1</span><b>2,001</b></div>
+            <div class="sai" style="--w:2.1%"><span>Employees (CPF): their revenue counts, but they are not customers</span><b>−42</b></div>
+            <div class="sai" style="--w:3%"><span>No valid CNPJ</span><b>−61</b></div>
+            <div class="sai" style="--w:2.4%"><span>No assigned sales rep</span><b>−48</b></div>
+            <div class="sai" style="--w:1.6%"><span>Not a customer (supplier, carrier…)</span><b>−33</b></div>
+            <div class="sai" style="--w:1.3%"><span>Duplicates (active record kept)</span><b>−26</b></div>
+            <div class="sai" style="--w:0.6%"><span>Test records and internal companies</span><b>−11</b></div>
+            <div class="fica" style="--w:89%"><span>Valid records</span><b>1,780</b></div>
+            <div class="fica" style="--w:87.5%"><span>Customers (distinct trade names, after merging)</span><b>1,750</b></div>
+          </div>
+          <h3>Rules that became code</h3>
+          <div class="grade g2 revelar">
+            <div class="cartao"><h4>37-month rolling window</h4><p>The most recent month in the sources defines the window: that month and the 36 before it. The current month is flagged as partial, and comparisons use the same period of the previous year.</p></div>
+            <div class="cartao"><h4>Merging by trade name</h4><p>Records with the same name (ignoring accents, spaces, and punctuation) become one customer, which inherits city, segment, and sales rep from the record with the most recent purchase.</p></div>
+            <div class="cartao"><h4>Customer status</h4><p><strong>Active:</strong> bought in the period. <strong>Lost:</strong> reached 12 months without buying within the period. <strong>New or reactivated:</strong> no purchase in the previous 12 months. <strong>Grew or declined:</strong> versus the same period of the previous year.</p></div>
+            <div class="cartao"><h4>Price increase</h4><p>Current revenue ÷ (current units × previous year's price) − 1, using only SKUs sold in both periods. This way, price is not confused with volume or mix.</p></div>
+          </div>
+        </section>
+
+        <!-- 05 -->
+        <section class="capitulo" id="c05">
+          <span class="rotulo-cap">05 · Facts and dimensions</span>
+          <h2>A star schema with the right grain.</h2>
+          <p>The most important modeling decision was the <strong>grain</strong> of each fact. Revenue by product does not know how many orders there were, and the orders source does not know which products were bought. Instead of forcing a single table, we kept <strong>two facts with different grains</strong>, each responsible for the indicators it can sum without error, plus an event that links products to the day's purchase.</p>
+          <figure class="diagrama revelar">
+            <svg viewBox="0 0 960 560" role="img" aria-label="Star schema: three fact tables in the center linked to customer, sales rep, product, and period dimensions, with supporting dimensions">
+              <g class="ligas">
+                <path class="liga forte" d="M365 142 C 310 142, 310 69, 260 69"/><path class="liga forte" d="M365 252 C 300 252, 310 69, 260 69"/><path class="liga forte" d="M365 362 C 290 362, 310 69, 260 69"/>
+                <path class="liga forte" d="M595 142 C 650 142, 650 69, 700 69"/><path class="liga forte" d="M595 362 C 660 362, 650 69, 700 69"/>
+                <path class="liga forte" d="M595 142 C 650 142, 650 249, 700 249"/><path class="liga forte" d="M595 252 C 650 252, 650 249, 700 249"/><path class="liga forte" d="M595 362 C 650 362, 650 249, 700 249"/>
+                <path class="liga forte" d="M595 142 C 660 142, 650 339, 700 339"/><path class="liga forte" d="M595 252 C 660 252, 650 339, 700 339"/>
+                <path class="liga" d="M30 69 H14 V339 H30 M14 159 H30 M14 249 H30"/>
+                <path class="liga" d="M930 69 H946 V159 H930"/>
+                <path class="liga" d="M365 489 C 300 489, 310 429, 260 429"/><path class="liga" d="M480 460 V 400"/>
+              </g>
+              <g class="no dim"><rect x="30" y="40" width="230" height="58" rx="10"/><text x="145" y="64" text-anchor="middle">dim_clientes</text><text class="sub" x="145" y="84" text-anchor="middle">branch | code | store · trade name</text></g>
+              <g class="no dim"><rect x="30" y="130" width="230" height="58" rx="10"/><text x="145" y="154" text-anchor="middle">dim_segmentacoes</text><text class="sub" x="145" y="174" text-anchor="middle">official naming</text></g>
+              <g class="no dim"><rect x="30" y="220" width="230" height="58" rx="10"/><text x="145" y="244" text-anchor="middle">dim_redes</text><text class="sub" x="145" y="264" text-anchor="middle">stores in the same chain</text></g>
+              <g class="no dim"><rect x="30" y="310" width="230" height="58" rx="10"/><text x="145" y="334" text-anchor="middle">dim_filiais</text><text class="sub" x="145" y="354" text-anchor="middle">fixed mapping</text></g>
+              <g class="no dim"><rect x="30" y="400" width="230" height="58" rx="10"/><text x="145" y="424" text-anchor="middle">dim_demonstradoras</text><text class="sub" x="145" y="444" text-anchor="middle">code, CPF, name</text></g>
+              <g class="no dim"><rect x="700" y="40" width="230" height="58" rx="10"/><text x="815" y="64" text-anchor="middle">dim_produtos</text><text class="sub" x="815" y="84" text-anchor="middle">SKU · GTIN · launch</text></g>
+              <g class="no dim"><rect x="700" y="130" width="230" height="58" rx="10"/><text x="815" y="154" text-anchor="middle">dim_categorias</text><text class="sub" x="815" y="174" text-anchor="middle">product line = category</text></g>
+              <g class="no dim"><rect x="700" y="220" width="230" height="58" rx="10"/><text x="815" y="244" text-anchor="middle">dim_vendedores</text><text class="sub" x="815" y="264" text-anchor="middle">history comes from the fact</text></g>
+              <g class="no dim"><rect x="700" y="310" width="230" height="58" rx="10"/><text x="815" y="334" text-anchor="middle">dim_periodos</text><text class="sub" x="815" y="354" text-anchor="middle">37 months · partial month</text></g>
+              <g class="no apoio"><rect x="700" y="400" width="230" height="58" rx="10"/><text x="815" y="424" text-anchor="middle">controle_cargas</text><text class="sub" x="815" y="444" text-anchor="middle">batches · history · undo</text></g>
+              <g class="no fato"><rect x="365" y="110" width="230" height="64" rx="10"/><text x="480" y="136" text-anchor="middle">fato_faturamento_produto</text><text class="sub" x="480" y="157" text-anchor="middle">day × customer × sales rep × SKU</text></g>
+              <g class="no fato"><rect x="365" y="220" width="230" height="64" rx="10"/><text x="480" y="246" text-anchor="middle">fato_pedidos_cliente</text><text class="sub" x="480" y="267" text-anchor="middle">day × customer × sales rep</text></g>
+              <g class="no fato"><rect x="365" y="330" width="230" height="64" rx="10"/><text x="480" y="356" text-anchor="middle">evento_compra_mix</text><text class="sub" x="480" y="377" text-anchor="middle">products in each purchase</text></g>
+              <g class="no apoio"><rect x="365" y="460" width="230" height="58" rx="10"/><text x="480" y="484" text-anchor="middle">schedules (ZVX × ZVY)</text><text class="sub" x="480" y="504" text-anchor="middle">store × demonstrator × month</text></g>
+            </svg>
+            <figcaption>Red: facts. Green: dimensions. Dashed: supporting tables. Customers branch out into segment, chain, and branch; products into category.</figcaption>
+          </figure>
+          <div class="grade g3 revelar">
+            <div class="cartao vermelho"><h4>fato_faturamento_produto</h4><p>Units, paid units (excluding free goods), and value. The source for revenue by product, category, average price, and price increase.</p></div>
+            <div class="cartao vermelho"><h4>fato_pedidos_cliente</h4><p>The only table where orders can be summed. Orders and average ticket per order come from here.</p></div>
+            <div class="cartao vermelho"><h4>evento_compra_mix</h4><p>Links products to the day's purchase (branch + customer + store + sales rep + date), to analyze mix and category penetration.</p></div>
+          </div>
+        </section>
+
+        <!-- 06 -->
+        <section class="capitulo" id="c06">
+          <span class="rotulo-cap">06 · The database</span>
+          <h2>MongoDB Atlas as the analytical layer.</h2>
+          <p>We chose MongoDB Atlas because it is easy to run in the cloud without a database server of our own, and because of its fast <em>bulk</em> loading. The collections follow the star schema, indexed on business keys and date fields. Besides the analytical tables, the database stores what gives the process <strong>operational safety</strong>:</p>
+          <div class="grade g3 revelar">
+            <div class="cartao"><span class="num">controle_cargas</span><h4>Every load is a batch</h4><p>Records what was received, accepted, and rejected, the month window, and the publication status.</p></div>
+            <div class="cartao"><span class="num">historico_importacoes</span><h4>History with undo</h4><p>Who imported, when, how long it took, the peak memory of each step, and a button to undo the last import.</p></div>
+            <div class="cartao"><span class="num">usuarios_importacao</span><h4>Protected access</h4><p>Passwords hashed with <em>scrypt</em> and salt, lockout after 5 attempts, and email reset with a single-use link.</p></div>
+          </div>
+          <p>A load never replaces the published version before passing validation. If a source arrives in the wrong format, the dashboard keeps the previous load, and whoever imported it gets a plain-language message, such as “File open in another program” or “The customer file looks off-format”, instead of a technical error.</p>
+        </section>
+
+        <!-- 07 -->
+        <section class="capitulo" id="c07">
+          <span class="rotulo-cap">07 · Backend and loading</span>
+          <h2>Eleven steps, one button.</h2>
+          <p>The backend is plain Node.js, no framework: an HTTP server and load scripts with one responsibility each. The person importing only picks the files in the browser. The server validates the columns, chooses between a <strong>quick load</strong> (auxiliary master data only, about 3 minutes) and a <strong>full load</strong> (facts, about 20 minutes), runs the steps, and shows progress. Times and memory peaks measured on a real load:</p>
+          <div class="legenda-etapas"><span></span><span>Step</span><span>Time</span><span>Memory</span></div>
+          <div class="etapas revelar">
+            <div class="etapa"><div><h4>Process customers (SA1)</h4><p>exclusions, duplicates, reason reports</p></div><div><div class="barra"><i style="--w:2%"></i></div><small>5 s</small></div><div><div class="barra mem"><i style="--w:23%"></i></div><small>234 MB</small></div></div>
+            <div class="etapa"><div><h4>Process sales reps (SA3)</h4><p>status and standardized code</p></div><div><div class="barra"><i style="--w:1%"></i></div><small>&lt; 1 s</small></div><div><div class="barra mem"><i style="--w:4%"></i></div><small>41 MB</small></div></div>
+            <div class="etapa"><div><h4>Consolidate customers and sales reps</h4><p>current accounts and full registry</p></div><div><div class="barra"><i style="--w:1%"></i></div><small>2 s</small></div><div><div class="barra mem"><i style="--w:12%"></i></div><small>123 MB</small></div></div>
+            <div class="etapa"><div><h4>Products, categories, and schedules</h4><p>GTIN, category, demonstrators</p></div><div><div class="barra"><i style="--w:2%"></i></div><small>6 s</small></div><div><div class="barra mem"><i style="--w:18%"></i></div><small>183 MB</small></div></div>
+            <div class="etapa"><div><h4>Branches</h4><p>fixed mapping</p></div><div><div class="barra"><i style="--w:1%"></i></div><small>1 s</small></div><div><div class="barra mem"><i style="--w:4%"></i></div><small>41 MB</small></div></div>
+            <div class="etapa"><div><h4>Dimensions to the database</h4><p>upsert without changing identifiers</p></div><div><div class="barra"><i style="--w:11%"></i></div><small>2 min</small></div><div><div class="barra mem"><i style="--w:14%"></i></div><small>145 MB</small></div></div>
+            <div class="etapa"><div><h4>Facts to the database</h4><p>customer merging, 37-month window, bulk write</p></div><div><div class="barra"><i style="--w:100%"></i></div><small>17.5 min</small></div><div><div class="barra mem"><i style="--w:92%"></i></div><small>951 MB</small></div></div>
+            <div class="etapa"><div><h4>Audit exclusions</h4><p>everything left out has a reason</p></div><div><div class="barra"><i style="--w:1%"></i></div><small>6 s</small></div><div><div class="barra mem"><i style="--w:9%"></i></div><small>92 MB</small></div></div>
+            <div class="etapa"><div><h4>Check against official revenue</h4><p>month by month and customer by customer</p></div><div><div class="barra"><i style="--w:3%"></i></div><small>35 s</small></div><div><div class="barra mem"><i style="--w:8%"></i></div><small>82 MB</small></div></div>
+            <div class="etapa"><div><h4>Build the dashboard package</h4><p>dimensions + binary vectors</p></div><div><div class="barra"><i style="--w:8%"></i></div><small>1.4 min</small></div><div><div class="barra mem"><i style="--w:52%"></i></div><small>534 MB</small></div></div>
+            <div class="etapa"><div><h4>Validate the package</h4><p>totals and structure before publishing</p></div><div><div class="barra"><i style="--w:1%"></i></div><small>5 s</small></div><div><div class="barra mem"><i style="--w:11%"></i></div><small>115 MB</small></div></div>
+          </div>
+          <div class="par-codigo revelar">
+            <div>
+              <h3>Customer merging</h3>
+              <p>The “a customer is a trade name” rule handles stores that change CNPJ and records repeated across branches. Each group keeps the record with the most recent purchase, so the current data (city, segment, and sales rep) applies.</p>
+            </div>
+<pre><code><span class="c">// Mesmo nome fantasia = mesmo cliente, em qualquer filial.</span>
+<span class="k">const</span> chave = (nome) =&gt; nome.normalize(<span class="s">"NFD"</span>)
+  .replace(<span class="s">/[̀-ͯ]/g</span>, <span class="s">""</span>)
+  .replace(<span class="s">/[^A-Za-z0-9]/g</span>, <span class="s">""</span>).toUpperCase();
+
+<span class="k">for</span> (<span class="k">const</span> [cadastro, nome] <span class="k">of</span> nomeDoCadastro)
+  <span class="f">unir</span>(cadastro, <span class="s">`nome:${chave(nome)}`</span>);
+
+<span class="c">// Cada grupo usa o cadastro da compra mais recente.</span>
+<span class="k">const</span> principal = grupo.sort(porUltimaCompra)[0];</code></pre>
+          </div>
+        </section>
+
+        <!-- 08 -->
+        <section class="capitulo" id="c08">
+          <span class="rotulo-cap">08 · Front-end</span>
+          <h2>A dashboard built from scratch that computes in the browser.</h2>
+          <p>No charting library, no framework. The server delivers a package with the dimensions and facts as <strong>binary vectors</strong> (base64-encoded integers). More than a million revenue rows fit in a few megabytes, and the <strong>calculation engine</strong> in the browser recomputes every indicator on each filter, with no round trip to the server.</p>
+          <div class="par-codigo revelar">
+<pre><code><span class="c">// Exportação: cada coluna do fato vira um vetor tipado.</span>
+<span class="k">const</span> F = {
+  p:   <span class="k">new</span> <span class="f">Uint8Array</span>(n),   <span class="c">// período</span>
+  c:   <span class="k">new</span> <span class="f">Uint16Array</span>(n),  <span class="c">// cliente</span>
+  pr:  <span class="k">new</span> <span class="f">Uint16Array</span>(n),  <span class="c">// produto</span>
+  val: <span class="k">new</span> <span class="f">Int32Array</span>(n),   <span class="c">// valor em centavos</span>
+};
+
+<span class="c">// No navegador: decodifica uma vez, recalcula a cada clique.</span>
+<span class="k">const</span> val = <span class="k">new</span> <span class="f">Int32Array</span>(bytes(D.fato.val).buffer);</code></pre>
+            <div>
+              <h3>What the engine delivers</h3>
+              <p>Each customer's status, a growth bridge (gains and losses by status), category penetration, price increase by SKU, accounts by sales rep, a state ranking, and day-by-day detail for a single customer.</p>
+              <p>All with automatic comparison against the same period of the previous year, or against the immediately preceding period.</p>
+            </div>
+          </div>
+          <div class="galeria revelar">
+            <figure><img src="../assets/painel-composicao.jpg" alt="Growth breakdown: two donut charts with gains and losses by customer status and a contribution table" loading="lazy" width="1440" height="760"><figcaption>Growth breakdown: gains and losses by customer status.</figcaption></figure>
+            <figure><img src="../assets/painel-estados.jpg" alt="Map of Brazil colored by growth and a ranking of states by revenue" loading="lazy" width="1440" height="820"><figcaption>State map and ranking. Clicking a state filters the page.</figcaption></figure>
+            <figure><img src="../assets/painel-produtos.jpg" alt="Price increase by category and monthly trend of the price increase" loading="lazy" width="1440" height="820"><figcaption>Price increase separated from volume and mix.</figcaption></figure>
+            <figure><img src="../assets/painel-clientes.jpg" alt="Category penetration among purchasing customers, as rings per category" loading="lazy" width="1440" height="820"><figcaption>Category penetration and opportunity by category.</figcaption></figure>
+          </div>
+        </section>
+
+        <!-- 09 -->
+        <section class="capitulo" id="c09">
+          <span class="rotulo-cap">09 · Layout adjustments</span>
+          <h2>Iterate with the people who use it.</h2>
+          <p>The dashboard was built in short cycles with the sales team, with one round of adjustments per session. Each request became an interface pattern applied to every screen, not a one-off patch. Some of the changes:</p>
+          <div class="revelar">
+            <div class="mudanca"><div class="antes"><b>Before</b>Abbreviated values (“R$ 58,6 mi”) that did not match the official report.</div><div class="seta">→</div><div class="depois"><b>After</b>Values always shown in full in labels, tooltips, donuts, and tables; only the axis scale is abbreviated.</div></div>
+            <div class="mudanca"><div class="antes"><b>Before</b>Chart tooltips shaped as lists, each one different from the next.</div><div class="seta">→</div><div class="depois"><b>After</b>Tooltips shaped like the cards: total, split (valid customers and others), previous year in gray, and change at the bottom.</div></div>
+            <div class="mudanca"><div class="antes"><b>Before</b>A filter applied by clicking was invisible, and the click switched tabs.</div><div class="seta">→</div><div class="depois"><b>After</b>Clicking filters the current page; filters stack up as badges with an ×, and one button clears them all.</div></div>
+            <div class="mudanca"><div class="antes"><b>Before</b>Indicator cards fell out of alignment when a label wrapped.</div><div class="seta">→</div><div class="depois"><b>After</b>A grid with <em>subgrid</em>: top, detail, previous year, and change always at the same height.</div></div>
+            <div class="mudanca"><div class="antes"><b>Before</b>A table with more than 8,000 rows took about 1 s to open its tab.</div><div class="seta">→</div><div class="depois"><b>After</b>Virtual table: only visible rows are drawn. The tab opens in about 0.3 s, with search, sorting, and CSV intact.</div></div>
+            <div class="mudanca"><div class="antes"><b>Before</b>Average ticket per product with 2 decimal places hid real price changes.</div><div class="seta">→</div><div class="depois"><b>After</b>4 decimal places on the per-product ticket, at the sales team's request.</div></div>
+          </div>
+          <figure class="revelar"><img src="../assets/painel-tema-claro.jpg" alt="Dashboard in the light theme" loading="lazy" width="1440" height="900"><figcaption>Light and dark themes, with the choice remembered between visits.</figcaption></figure>
+        </section>
+
+        <!-- 10 -->
+        <section class="capitulo" id="c10">
+          <span class="rotulo-cap">10 · Validation</span>
+          <h2>Match to the cent, or explain the difference.</h2>
+          <p>Validation was treated as a deliverable, not as a final step. Every view was compared with the official report or with the BI tool, row by row, across all 37 months. The differences we found led to some of the project's best decisions:</p>
+          <div class="tabela-rolagem revelar">
+            <table class="tabela">
+              <thead><tr><th>What we validated</th><th>Against</th><th>Result</th><th>What we learned</th></tr></thead>
+              <tbody>
+                <tr><td>Revenue by month and by sales rep</td><td>Official report</td><td class="ok">Matches</td><td>Differences in the current month came only from extracts taken at different times.</td></tr>
+                <tr><td>Orders</td><td>BI</td><td class="ok">Matches</td><td>The BI tool counted the order number, which repeats across branches. The correct key is branch + number, and the right reference was the sum with the branch on the rows, not the consolidated total.</td></tr>
+                <tr><td>Segments and states</td><td>Official report</td><td class="ok">Matches</td><td>Differences by state came from trade names repeated in different states. The fix was made in the master data, and the rule stayed simple.</td></tr>
+                <tr><td>Categories and products</td><td>BI</td><td class="ok">Matches</td><td>Every SKU matches in value and quantity; only the name of one technical category differs.</td></tr>
+                <tr><td>Customers with the largest growth and decline</td><td>Raw data</td><td class="ok">Matches</td><td>Checked customer by customer against the original extracts.</td></tr>
+                <tr><td>Stores with a demonstrator</td><td>BI</td><td class="alerta">Decision</td><td>The BI tool linked demonstrators even to returns from stores with no schedule. The sales team chose the schedule as the source of truth, and the discrepancy was documented.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="destaque revelar">Validating is not proving the dashboard is right. It is finding where the sources disagree and leaving the decision to the people who know the business.</p>
+        </section>
+
+        <!-- 11 -->
+        <section class="capitulo" id="c11">
+          <span class="rotulo-cap">11 · 24/7 deployment</span>
+          <h2>Online all day, for US$ 11 a month.</h2>
+          <p>The dashboard moved from a local server to the cloud, with three requirements: access by link only (no login on the dashboard), imports from any computer, and no company data in the code repository.</p>
+          <div class="arquitetura revelar">
+            <div class="caixa"><span class="tag">Private GitHub</span><b>Code only</b><ul><li>data, spreadsheets, and passwords kept out of the repository</li><li>every push deploys automatically</li></ul></div>
+            <div class="seta">→</div>
+            <div class="caixa"><span class="tag">Koyeb · 2 GB</span><b>Node.js server</b><ul><li>secret link: without the key, everything returns 404</li><li>imports with login and compressed upload</li><li>full load runs on the server itself</li></ul></div>
+            <div class="seta">⇄</div>
+            <div class="caixa"><span class="tag">MongoDB Atlas</span><b>Data and mirror</b><ul><li>facts and dimensions</li><li>source files and dashboard package mirrored (GridFS, gzip)</li></ul></div>
+          </div>
+          <div class="grade g2 revelar">
+            <div class="cartao azul"><h4>A disk that vanishes on every deploy</h4><p>The cloud server starts empty on every deploy. The source files and the dashboard package are mirrored in Atlas, compressed (601 MB becomes 49 MB). On startup, the server downloads whatever is missing; at the end of each load, it uploads what changed.</p></div>
+            <div class="cartao ambar"><h4>A machine sized by measurement, not estimate</h4><p>Each load step records its own peak memory. The fact load reached about 1 GB. We tested a 1 GB machine with limited memory, it failed, and we chose the 2 GB one, with headroom for the data to grow.</p></div>
+            <div class="cartao verde"><h4>23 MB that became 3.3 MB</h4><p>The dashboard package is sent compressed and with an ETag. On a second visit, with no new load, the browser downloads nothing: it just gets “not modified” (304).</p></div>
+            <div class="cartao violeta"><h4>Secret link, no login</h4><p>The dashboard only responds at <code>/&lt;chave&gt;/</code>. Outside of it, any address returns “Not found”. Headers prevent indexing and leaking the key through the Referer. If the link leaks, just rotate the key.</p></div>
+          </div>
+<pre class="revelar"><code><span class="c">// Sem a chave no caminho, o servidor não revela nem que existe.</span>
+<span class="k">if</span> (chaveAcesso) {
+  <span class="k">const</span> prefixo = <span class="s">`/${chaveAcesso}`</span>;
+  <span class="k">if</span> (!rota.startsWith(<span class="s">`${prefixo}/`</span>)) <span class="k">return</span> <span class="f">naoEncontrado</span>(response);
+  rota = rota.slice(prefixo.length);
+}</code></pre>
+        </section>
+
+        <!-- 12 -->
+        <section class="capitulo" id="c12">
+          <span class="rotulo-cap">12 · This version</span>
+          <h2>The same dashboard, with a company that does not exist.</h2>
+          <p>This portfolio version runs entirely on GitHub Pages, with no database and no server. The <strong>dashboard code is the same</strong> as in the production version. Only the data package was swapped for a fictional dataset, created by a custom generator for <em>Aurora Cosméticos Profissionais</em>, a made-up manufacturer.</p>
+          <div class="grade g4 revelar">
+            <div class="cartao"><span class="num">CUSTOMERS</span><h4>1,822 records</h4><p>Chains with several stores, the same store with a new CNPJ, employees, and invalid records.</p></div>
+            <div class="cartao"><span class="num">SALES</span><h4>169k rows</h4><p>37 months with seasonality, annual price increases, free goods, and returns.</p></div>
+            <div class="cartao"><span class="num">LIFECYCLE</span><h4>Living customers</h4><p>New, lost, and reactivated customers, and accounts changing hands between sales reps.</p></div>
+            <div class="cartao"><span class="num">FIELD</span><h4>46 demonstrators</h4><p>Monthly schedules that increase purchases at the stores they cover.</p></div>
+          </div>
+          <p>The generator uses a fixed seed (the output is always the same) and writes the package in the exact format the real pipeline exports from the database. That is why every filter, click, map, table, the CSV export, and the theme work just as in production. No name, CNPJ, customer, sales rep, or value comes from real data.</p>
+          <h3>Technologies</h3>
+          <div class="pilulas">
+            <span>Node.js 22</span><span>Framework-free JavaScript</span><span>Custom SVG (no charting library)</span><span>MongoDB Atlas</span><span>GridFS</span><span>TOTVS Protheus</span><span>Corporate BI</span><span>Koyeb</span><span>GitHub</span><span>Puppeteer (screen tests)</span><span>ExcelJS</span>
+          </div>
+
+          <div class="encerramento revelar">
+            <span class="rotulo-cap">Try it</span>
+            <h2>Click any number and watch the whole page respond.</h2>
+            <p class="texto">A suggested path: on the “Visão geral” (overview) tab, click “Clientes perdidos” (lost customers), then a state on the map, and open the “Análise por cliente” (customer analysis) tab. The filters carry over, as badges at the top.</p>
+            <div class="acoes"><a class="btn primario" href="../painel/">Open the dashboard →</a><a class="btn" href="https://github.com/lariantunez/Diagnostico-Comercial">View the code</a></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span><strong>Larissa Antunez</strong> · Analytics &amp; Development</span>
+      <span>Real project in production · portfolio version with fictional data</span>
+    </div>
+  </footer>
+  <script src="../assets/estudo.js"></script>
+</body>
+</html>
