@@ -50,4 +50,8 @@ node ferramentas/gerar-dados-ficticios.js
 
 ---
 
+**🇺🇸 English:** a case study of a sales diagnostics dashboard built from scratch for a professional cosmetics manufacturer. It covers discovering the ERP and BI sources, a star schema (2 fact tables at different grains, 9 dimensions), an 11-step load pipeline with undo, a framework-free dashboard whose calculation engine runs in the browser, validation against official revenue across 37 months, and 24/7 deployment on Koyeb with MongoDB Atlas. The portfolio version uses the same dashboard code with a fictional company and a seeded data generator.
+
+---
+
 Larissa Antunez · Analytics & Desenvolvimento
