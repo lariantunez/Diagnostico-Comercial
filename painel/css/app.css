@@ -169,6 +169,7 @@ main.ocupado { opacity: .55; }
 .kpis:has(> .kpi:nth-child(6):last-child) { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .kpis:has(> .kpi:nth-child(7):last-child) { grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .kpis:has(> .kpi:nth-child(8):last-child) { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+.kpis:has(> .kpi:nth-child(9):last-child) { grid-template-columns: repeat(9, minmax(0, 1fr)); }
 .kpi { min-height: 184px; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--sombra); padding: 16px 18px; display: flex; flex-direction: column; justify-content: flex-start; }
 .kpi .rotulo { color: var(--text-secondary); font-size: var(--font-subtitle); line-height: 1.35; }
 .kpi .linha-valor-atual { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
@@ -198,6 +199,7 @@ main.ocupado { opacity: .55; }
 .kpi .rodape-variacao + .acao-kpi { margin-top: 0; }
 .kpi .valor-anterior { color: var(--text-muted); font-size: var(--font-kpi); font-weight: 400; line-height: 1.15; }
 .kpi .periodo-anterior { color: var(--text-muted); font-size: var(--font-body); line-height: 1.4; margin-top: 3px; }
+.kpi.kpi-estatico .periodo-anterior { white-space: pre-line; } /* card Clientes cadastrados: texto e período em linhas separadas */
 .kpi .sem-comparacao { color: var(--text-muted); font-size: var(--font-body); line-height: 1.4; }
 .kpi .acao-kpi { margin-top: auto; padding-top: 12px; }
 .kpi .acao-kpi .btn { width: 100%; }
@@ -293,6 +295,9 @@ td.texto-longo { max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
 .cabecalho-cartao + .composicao { margin-top: 32px; }
 .composicao-resumo { margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--border); }
 .composicao h3 { font-size: var(--font-legend); color: var(--text-secondary); font-weight: 650; margin: 0 0 12px; }
+/* Pergunta que o gráfico/tabela responde, logo abaixo do título. */
+.composicao .pergunta-grafico { color: var(--text-muted); font-size: var(--font-body); line-height: 1.45; margin: -6px 0 14px; white-space: normal; }
+.composicao .legenda-pizza .pergunta-grafico { margin: -12px 0 18px; }
 .lista-valores { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; font-size: var(--font-body); }
 .lista-valores li { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; gap: 8px; align-items: baseline; color: var(--text-secondary); }
 .lista-valores li i { width: 12px; height: 12px; border-radius: 3px; background: var(--c); align-self: center; }
@@ -390,6 +395,11 @@ td.texto-longo { max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
 .crescimento-destaque .periodo { flex-basis: 100%; color: var(--text-muted); font-size: var(--font-body); }
 .tabela-contrib th:nth-child(2), .tabela-contrib td:nth-child(2) { width: 110px; }
 .tabela-contrib th:nth-child(3), .tabela-contrib td:nth-child(3) { width: 170px; }
+/* Contribuição por situação: cabeçalhos longos (Contribuição no crescimento geral % | Variação do faturamento R$). */
+.tabela-contrib.contrib-situacao th:nth-child(2), .tabela-contrib.contrib-situacao td:nth-child(2) { width: 200px; }
+.tabela-contrib.contrib-situacao th:nth-child(3), .tabela-contrib.contrib-situacao td:nth-child(3) { width: 200px; }
+.tabela-contrib.contrib-situacao th { white-space: nowrap; vertical-align: bottom; line-height: 1.35; }
+.tabela-contrib.contrib-situacao th:not(:first-child), .tabela-contrib.contrib-situacao td:not(:first-child) { text-align: center; }
 .tabela-contrib tr.total td { border-top: 1px solid var(--axis); color: var(--text-primary); }
 .tabela-contrib tr.total td.sobe { color: var(--good-text); }
 .tabela-contrib tr.total td.desce { color: var(--bad-text); }
@@ -626,3 +636,27 @@ a.btn { display: inline-block; text-decoration: none; }
 @media (max-width: 1800px) { .kpi .detalhe-valor .kpi-filtro { white-space: normal; } }
 /* Títulos dos cartões em uma linha: mesmo tamanho para todos, ajustado à largura da tela. */
 .kpi.kpi-grade .rotulo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: clamp(12px, 0.84vw, var(--font-subtitle)); }
+
+/* Botão "Entenda o gráfico" e a janela explicativa que ele abre. */
+.btn-entenda { white-space: nowrap; }
+/* No cabeçalho do cartão o botão vai para a direita (junto do total, quando houver). */
+.cabecalho-cartao > .btn-entenda { margin-left: auto; align-self: flex-start; }
+.janela-explica { max-width: min(720px, calc(100vw - 32px)); width: 100%; max-height: calc(100vh - 48px); padding: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-1); color: var(--text-primary); box-shadow: var(--sombra); }
+.janela-explica::backdrop { background: rgba(0, 0, 0, .55); }
+.janela-explica .janela-topo { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; background: var(--surface-1); border-bottom: 1px solid var(--border); }
+.janela-explica .janela-topo h3 { margin: 0; font-size: var(--font-title); }
+.janela-explica .janela-fechar { font-size: 20px; line-height: 1; padding: 2px 10px; }
+.janela-explica .janela-corpo { padding: 8px 20px 20px; font-size: var(--font-body); line-height: 1.55; color: var(--text-secondary); }
+.janela-explica h4 { margin: 18px 0 6px; color: var(--text-primary); font-size: var(--font-body); }
+.janela-explica strong { color: var(--text-primary); }
+.janela-explica ol, .janela-explica ul { margin: 0; padding-left: 20px; }
+.janela-explica .tabela-contrib { margin-top: 6px; }
+.janela-explica .cor-pos { color: var(--good-text); font-weight: 600; }
+.janela-explica .cor-neg { color: var(--bad-text); font-weight: 600; }
+
+/* Sinais sutis de = e + entre os títulos das colunas de clientes que somam (só no título, não nas linhas). */
+/* No título o sinal fica no meio da altura (o th já é sticky, então serve de referência para o sinal). */
+th.op-igual::before, th.op-mais::before { position: absolute; left: -0.35em; color: var(--text-muted); opacity: .45; font-weight: 400; pointer-events: none; }
+th.op-igual::before, th.op-mais::before { top: 50%; transform: translateY(-50%); }
+th.op-igual::before { content: "="; }
+th.op-mais::before { content: "+"; }

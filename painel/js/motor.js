@@ -28,12 +28,18 @@ const Motor = (() => {
   const vendedores = D.vendedores.map((r) => ({ cod: r[0], nome: r[1], status: r[2] }));
   const dic = D.dic;
   const nC = clientes.length, nPr = produtos.length, nV = vendedores.length, nP = periodos.length, nCat = dic.categoria.length, nFam = dic.familia.length;
+  // Categorias que não são categoria (sujeira da base, regra da usuária em 23/11/2026; TERCEIROS - MP em 24/11/2026): ficam fora de todos os gráficos,
+  // tabelas e do filtro de categoria. O faturamento delas continua nos totais (empresa, clientes e vendedores vêm da base
+  // de pedidos), então o total segue batendo com o TOTVS/ADV.
+  const CATEGORIAS_FORA = new Set(["ME TERCEIROS", "POTE", "TAMPA", "TERCEIROS - MP"]);
+  const catFora = new Uint8Array(nCat);
+  dic.categoria.forEach((nome, k) => { if (CATEGORIAS_FORA.has(String(nome || "").trim().toUpperCase())) catFora[k] = 1; });
 
   // Funcionários (cadastro SA1 classificado como "Funcionário (CPF)" e sem nome fantasia entre os cadastros válidos):
   // o faturamento deles conta normalmente, mas não são clientes (ficam fora de ativos, perdidos, novos, cresceram etc.).
   const funcionario = new Uint8Array(nC);
   if (D.cadastroGeral) {
-    const nomeChave = (v) => String(v || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    const nomeChave = Fmt.chaveNome;
     const chavesFunc = new Set(D.cadastroGeral.linhas.filter((l) => !l[7] && l[8] === "Funcionário (CPF)").map((l) => l[0]));
     const nomesValidos = new Set(D.cadastroGeral.linhas.filter((l) => l[7]).map((l) => nomeChave(l[2])));
     clientes.forEach((cl, c) => { if (chavesFunc.has(cl.chave) && !nomesValidos.has(nomeChave(cl.nome))) funcionario[c] = 1; });
@@ -41,7 +47,8 @@ const Motor = (() => {
 
   // Atendimento de demonstradora: agendas mensais por loja (D.demonstradoras.agendas = [cliente, demonstradora, AAAAMM, meta]).
   // Mesmo nome fantasia = mesmo cliente: a agenda de qualquer cadastro vale para todos os cadastros do mesmo nome.
-  const nomeGrupo = (v) => String(v || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  // O cadastro da demonstradora ("... - DEMONST. 01") entra no grupo da loja (Fmt.chaveNome).
+  const nomeGrupo = Fmt.chaveNome;
   const grupoCliente = new Int32Array(nC);
   {
     const ids = new Map();
@@ -51,6 +58,8 @@ const Motor = (() => {
   const demonstradoras = D.demonstradoras?.nomes || [];
   const agendas = (D.demonstradoras?.agendas || []).map(([c, d, p, meta]) => ({ g: grupoCliente[c], d, p: pIdx.get(String(p)) ?? -1, meta })).filter((a) => a.p >= 0);
   const temDemonstradoras = agendas.length > 0;
+  // Opções do filtro "Demonstradora" do topo: só quem tem agenda em alguma loja do painel.
+  const demonstradorasComAgenda = [...new Set(agendas.map((a) => a.d))].map((id) => ({ id, nome: demonstradoras[id] }));
 
   // Faturamento por mês (sem filtros) para saber quais meses têm dados.
   const fatMes = new Float64Array(nP);
@@ -107,7 +116,9 @@ const Motor = (() => {
     // Atendimento de demonstradora no período: meses com agenda e demonstradoras por cliente (grupo de nome fantasia).
     // "Apenas lojas com atendimento": só clientes com agenda em ao menos um mês do período (a comparação usa as mesmas lojas).
     // f.SDemo: meses que definem as lojas atendidas quando o cálculo é de outro período (ex.: ciclo anterior dos perdidos).
-    const demoMeses = new Uint8Array(nG), demoNomes = new Map();
+    // Filtro "Demonstradora" do topo (f.demonstradora): só as lojas com agenda das demonstradoras escolhidas no período.
+    const demoMeses = new Uint8Array(nG), demoNomes = new Map(), lojasDemoEscolhida = new Uint8Array(nG);
+    const filtroDemo = f.demonstradora && f.demonstradora.size ? f.demonstradora : null;
     {
       const inDemo = f.SDemo ? new Uint8Array(nP) : inS;
       if (f.SDemo) for (const p of f.SDemo) if (pIdx.has(p)) inDemo[pIdx.get(p)] = 1;
@@ -118,16 +129,18 @@ const Motor = (() => {
         if (!visto.has(k)) { visto.add(k); demoMeses[a.g] += 1; }
         if (!demoNomes.has(a.g)) demoNomes.set(a.g, new Set());
         demoNomes.get(a.g).add(a.d);
+        if (filtroDemo?.has(a.d)) lojasDemoEscolhida[a.g] = 1;
       }
     }
     if (f.soDemonstradora) for (let i = 0; i < nC; i += 1) if (cOK[i] && !demoMeses[grupoCliente[i]]) cOK[i] = 0;
+    if (filtroDemo) for (let i = 0; i < nC; i += 1) if (cOK[i] && !lojasDemoEscolhida[grupoCliente[i]]) cOK[i] = 0;
     const demo = {
       meses: (c) => demoMeses[grupoCliente[c]],
       nomes: (c) => [...(demoNomes.get(grupoCliente[c]) || [])].map((d) => demonstradoras[d]).sort((a, b) => a.localeCompare(b, "pt-BR")),
     };
     const prOK = mascara(nPr, f.familia, "fam", produtos);
     const okCat = mascara(nPr, f.categoria, "cat", produtos);
-    for (let i = 0; i < nPr; i += 1) prOK[i] &= okCat[i];
+    for (let i = 0; i < nPr; i += 1) prOK[i] &= okCat[i] & (catFora[produtos[i].cat] ? 0 : 1);
     if (f.selecao?.produtos) for (let i = 0; i < nPr; i += 1) if (prOK[i] && !f.selecao.produtos.has(i)) prOK[i] = 0;
     const vOK = new Uint8Array(nV).fill(1);
     if (f.vendedor && f.vendedor.size) for (let i = 0; i < nV; i += 1) vOK[i] = f.vendedor.has(i) ? 1 : 0;
@@ -333,5 +346,5 @@ const Motor = (() => {
     return { val, qp, q };
   }
 
-  return { D, F, O, funcionario, temDemonstradoras, periodos, pIdx, clientes, produtos, vendedores, dic, nC, nPr, nV, nP, nCat, nFam, fatMes, mesesComDados, mesParcial, desloca, periodosComparacao, calcular, pvm, serieItem };
+  return { catFora, D, F, O, funcionario, temDemonstradoras, demonstradorasComAgenda, periodos, pIdx, clientes, produtos, vendedores, dic, nC, nPr, nV, nP, nCat, nFam, fatMes, mesesComDados, mesParcial, desloca, periodosComparacao, calcular, pvm, serieItem };
 })();

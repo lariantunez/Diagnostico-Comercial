@@ -15,7 +15,7 @@
 
   const estado = {
     S: new Set(padraoS), modo: "ano",
-    nomeFantasia: new Set(), canal: new Set(), regiao: new Set(), uf: new Set(), vendedor: new Set(), familia: new Set(), categoria: new Set(), geo: null, selecao: null, selecoes: [], soDemonstradora: false,
+    nomeFantasia: new Set(), canal: new Set(), regiao: new Set(), uf: new Set(), vendedor: new Set(), familia: new Set(), categoria: new Set(), demonstradora: new Set(), geo: null, selecao: null, selecoes: [], soDemonstradora: false,
     aba: (location.hash || "#geral").slice(1),
   };
   if (!Telas.some((t) => t.id === estado.aba)) estado.aba = "geral";
@@ -52,7 +52,9 @@
     ["uf", "f-uf", "UF", ordenarNomes(M.dic.uf)],
     ["vendedor", "f-vendedor", "Vendedor", M.vendedores.map((v, id) => ({ id, nome: v.nome })).filter((o) => vendedoresComVenda.has(o.id)).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))],
     ["familia", "f-familia", "Família", ordenarNomes(M.dic.familia)],
-    ["categoria", "f-categoria", "Categoria (linha)", ordenarNomes(M.dic.categoria)],
+    ["categoria", "f-categoria", "Categoria (linha)", ordenarNomes(M.dic.categoria).filter((o) => !M.catFora[o.id])], // sem ME TERCEIROS, POTE, TAMPA, TERCEIROS - MP
+    // Lojas com agenda da demonstradora no período (ZVX/ZVY), com todo o faturamento da loja.
+    ["demonstradora", "f-demonstradora", "Demonstradora", M.demonstradorasComAgenda.slice().sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))],
   ];
   for (const [chave, id, rotulo, opcoes] of defs) ctrls[chave] = UI.multi($(id), { rotulo, opcoes, aoMudar: (s) => { estado[chave] = s; agendar(); } });
   $("limpar").addEventListener("click", () => {
@@ -106,7 +108,7 @@
   // Seleção por clique (clientes e/ou produtos): filtra o painel todo. Os cliques se acumulam (um filtro em cima do outro);
   // clicar de novo num item já aplicado tira só ele. detail: { rotulo, clientes?: [ids], produtos?: [ids], aba? } ou null = limpa tudo.
   // Clientes: interseção pelo nome fantasia (mesmo nome = mesmo cliente), ficando com os cadastros do último clique.
-  const nomeSel = (c) => String(M.clientes[c].nome || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9]/g, "").toUpperCase() || `#${c}`;
+  const nomeSel = (c) => Fmt.chaveNome(M.clientes[c].nome) || `#${c}`;
   function combinarSelecoes(lista) {
     if (!lista.length) return null;
     const comCli = lista.filter((x) => x.clientes), comProd = lista.filter((x) => x.produtos);
@@ -133,7 +135,7 @@
     }
     agendar();
   });
-  // Botão "Apenas lojas com atendimento" (aba de clientes): liga/desliga o filtro de lojas com demonstradora no painel todo.
+  // Botão "Apenas lojas com atendimento" (abas de clientes e de produtos): liga/desliga o filtro de lojas com demonstradora no painel todo.
   window.addEventListener("painel:demonstradora", () => {
     estado.soDemonstradora = !estado.soDemonstradora;
     estado.selecao = null; estado.selecoes = []; // a seleção por clique foi montada com a outra base de lojas

@@ -3,6 +3,18 @@ const Telas = (() => {
   const M = Motor;
   const { el } = UI;
   const COR_STATUS = ["var(--series-1)", "var(--series-2)", "var(--muted-mark)", "var(--series-3)", "var(--series-4)", "var(--series-8)", "var(--mapa-estavel)", "var(--series-5)"];
+  // Botão "Entenda o gráfico" em todos os cartões: a explicação vem de js/explicacoes.js (window.EXPLICACOES),
+  // achada pelo início do título do cartão (o mais longo que servir). Padrão: o que analisa, pergunta, conta e como ler.
+  const realcarCores = (t) => Fmt.esc(t).replace(/(verdes?)/gi, '<span class="cor-pos">$1</span>').replace(/(vermelh[ao]s?)/gi, '<span class="cor-neg">$1</span>');
+  const explicacaoHTML = (e) => `<p><strong>O que analisa:</strong> ${realcarCores(e.o_que)}</p>`
+    + `<p><strong>Pergunta que responde:</strong> ${realcarCores(e.pergunta)}</p>`
+    + `<h4>Como é calculado</h4><ul>${e.conta.map((x) => `<li>${realcarCores(x)}</li>`).join("")}</ul>`
+    + (e.como_ler && e.como_ler.length ? `<h4>Como ler</h4><ul>${e.como_ler.map((x) => `<li>${realcarCores(x)}</li>`).join("")}</ul>` : "");
+  const acharExplicacao = (titulo) => (window.EXPLICACOES || []).filter((e) => titulo.startsWith(e.titulo)).sort((a, b) => b.titulo.length - a.titulo.length)[0];
+  function cartao(titulo, subtitulo = "", acoes = null) {
+    const e = acoes ? null : acharExplicacao(titulo);
+    return UI.cartao(titulo, subtitulo, e ? UI.botaoEntenda(titulo, explicacaoHTML(e)) : acoes);
+  }
 
   // ---------- Helpers ----------
   const sinal = (v) => (v > 0 ? "sobe" : v < 0 ? "desce" : "");
@@ -92,18 +104,26 @@ const Telas = (() => {
       if (!cli.valS[c] && !cli.valC[c] && !cli.pedS[c] && !cli.pedC[c]) continue;
       const k = chaveDe(c);
       // funcS/funcC: faturamento de funcionários ("Outros clientes"), que entra no total do grupo.
-      const a = g.get(k) || { k, funcS: 0, funcC: 0, valS: 0, valC: 0, ativosS: 0, ativosC: 0, novos: 0, reativados: 0, perdidos: 0, cresceram: 0, reduziram: 0, dNovos: 0, dReat: 0, dCresc: 0, dRed: 0, dPerd: 0, pedS: 0, pedC: 0, qpS: 0, qpC: 0 };
+      const a = g.get(k) || { k, funcS: 0, funcC: 0, valS: 0, valC: 0, ativosS: 0, ativosC: 0, totCli: 0, sCresc: 0, sRed: 0, sSem: 0, sAj: 0, novos: 0, reativados: 0, perdidos: 0, cresceram: 0, reduziram: 0, dNovos: 0, dReat: 0, dCresc: 0, dRed: 0, dPerd: 0, pedS: 0, pedC: 0, qpS: 0, qpC: 0 };
       a.valS += cli.valS[c]; a.valC += cli.valC[c]; a.pedS += cli.pedS[c]; a.pedC += cli.pedC[c]; a.qpS += cli.qpS[c]; a.qpC += cli.qpC[c];
       if (R.funcionario[c]) { a.funcS += cli.valS[c]; a.funcC += cli.valC[c]; }
       if (cli.compraS[c] && !R.funcionario[c]) a.ativosS += 1; // funcionário não é cliente
       if (cli.compraC[c] && !R.funcionario[c]) a.ativosC += 1;
+      // Situação do cliente, mesma regra da Carteira de clientes (cada cliente em uma coluna; as colunas somam o total).
+      if (!R.funcionario[c]) {
+        a.totCli += 1;
+        if (cli.compraS[c]) { if (status[c] === 3 || status[c] === 4) a.novos += 1; else if (cli.valS[c] >= cli.valC[c]) a.sCresc += 1; else a.sRed += 1; }
+        else if (!cli.compraC[c]) a.sAj += 1;
+        else if (status[c] === 5) a.perdidos += 1;
+        else a.sSem += 1;
+      }
       const d = cli.valS[c] - cli.valC[c];
       switch (status[c]) {
         case 0: a.cresceram += 1; a.dCresc += d; break;
         case 1: a.reduziram += 1; a.dRed += d; break;
-        case 3: a.novos += 1; a.dNovos += d; break;
-        case 4: a.reativados += 1; a.dReat += d; break;
-        case 5: a.perdidos += 1; a.dPerd += d; break;
+        case 3: a.dNovos += d; break; // contagem de novos/perdidos: no bloco das colunas que somam, acima
+        case 4: a.dReat += d; break;
+        case 5: a.dPerd += d; break;
         default: break;
       }
       g.set(k, a);
@@ -116,12 +136,23 @@ const Telas = (() => {
     return grupos.map((a) => ({
       nome: nomeDe(a.k), valS: a.valS, valC: a.valC, funcS: a.funcS, funcC: a.funcC, delta: a.valS - a.valC, var: R.temC ? taxa(a.valS, a.valC) : null,
       partS: div0(a.valS, tS), partC: R.temC ? div0(a.valC, tC) : null, contrib: R.temC ? div0(a.valS - a.valC, tC) : null,
-      ativosS: a.ativosS, ativosC: a.ativosC, novos: a.novos + a.reativados, perdidos: a.perdidos,
+      ativosS: a.ativosS, ativosC: a.ativosC, totCli: a.totCli, sCresc: a.sCresc, sRed: a.sRed, sSem: a.sSem, sAj: a.sAj, novos: a.novos + a.reativados, perdidos: a.perdidos,
       dNovos: a.dNovos + a.dReat, dPerd: a.dPerd, dCresc: a.dCresc, dRed: a.dRed,
       pedS: a.pedS, ticketS: div0(a.valS, a.pedS), ticketC: div0(a.valC, a.pedC), precoS: div0(a.valS, a.qpS), precoC: div0(a.valC, a.qpC),
     }));
   }
 
+  // Colunas de clientes por situação (equipe comercial e geográficas), mesma regra da Carteira de clientes.
+  // Cada cliente fica em uma coluna: Clientes = cresceram + reduziram + novos ou reativados + perdidos + sem compra (+ ajustes).
+  const colunasClientesSomam = (R) => R.temC ? [
+    { chave: "totCli", titulo: "Total de clientes", num: true, fmt: cNum, dica: "Compraram no período ou no ano anterior" },
+    { chave: "sCresc", titulo: "Clientes ativos que cresceram", num: true, fmt: cNum, classe: "op-igual" },
+    { chave: "sRed", titulo: "Clientes ativos que reduziram compras", num: true, fmt: cNum, classe: "op-mais" },
+    { chave: "novos", titulo: "Clientes novos ou reativados", num: true, fmt: cNum, classe: "op-mais" },
+    { chave: "perdidos", titulo: "Clientes perdidos", num: true, fmt: cNum, classe: "op-mais" },
+    { chave: "sSem", titulo: "Sem compra no período", num: true, fmt: cNum, classe: "op-mais", dica: "Compraram no ano anterior, não compraram no período e ainda não completaram 12 meses sem comprar (na equipe: ou passaram a comprar com outro vendedor)" },
+    { chave: "sAj", titulo: "Ajustes/devoluções", num: true, fmt: cNum, classe: "op-mais", dica: "Só devolução ou crédito nos dois períodos" },
+  ] : [{ chave: "ativosS", titulo: "Clientes com compra", num: true, fmt: cNum }];
   const colunasGrupo = (titulo, R) => [
     { chave: "nome", titulo, classe: "texto-longo" },
     { chave: "valS", titulo: "Faturamento", num: true, fmt: cRs },
@@ -212,12 +243,22 @@ const Telas = (() => {
     const tk = (v, n, fmt) => (n ? fmt(v / n) : "—");
     // Partes clicáveis dos cartões: cada número filtra a página pelos clientes que o formam (clicar de novo tira).
     const parte = (chave, html) => `<span class="kpi-filtro" data-sel="${chave}">${html}</span>`;
-    const divisao = (chave, validos, outros) => `${parte(`${chave}-validos`, `Clientes válidos: <strong>${validos}</strong>`)}<br>${parte(`${chave}-outros`, `Outros clientes: <strong>${outros}</strong>`)}`;
-    const nCadastrados = sa1 ? (filtrado ? compraCadastrados(R)?.total ?? 0 : sa1.clientes) : 0;
+    const divisao = (chave, validos, outros) => `${parte(`${chave}-validos`, `Clientes com CNPJ: <strong>${validos}</strong>`)}<br>${parte(`${chave}-outros`, `Clientes pessoa física: <strong>${outros}</strong>`)}`;
+    const cadComp = sa1 && filtrado ? compraCadastrados(R) : null;
+    const nCadastrados = sa1 ? (filtrado ? cadComp?.total ?? 0 : sa1.clientes) : 0;
+    // Data do cadastro: vem do nome do arquivo da SA1 (clientes_sa1_completo_AAAA-MM-DD.csv).
+    const dataSA1 = (sa1?.arquivo?.match(/(\d{4})-(\d{2})-(\d{2})/) || []).slice(1).reverse().join("/");
     k.innerHTML = [
       // Clientes cadastrados é o único cartão estático (não filtra a página).
-      sa1 ? UI.kpi({ rotulo: "Clientes cadastrados", valor: Fmt.num(filtrado ? nCadastrados : sa1.clientes), atualLegenda: filtrado ? "Da SA1, dentro do filtro aplicado" : "Total da SA1, sem filtros", extra: regraCadastro(sa1) }).replace("class=\"kpi", "class=\"kpi kpi-estatico") : "",
-      UI.kpi({ rotulo: "Clientes ativos", valor: parte("ativos", `<span class="tem-tooltip" data-tooltip-ativos>${Fmt.num(S.ativos + ativosFunc)}</span>`), detalhe: divisao("ativos", Fmt.num(S.ativos), Fmt.num(ativosFunc)), atual: S.ativos + ativosFunc, comparado: C ? C.ativos + ativosFuncC : undefined, atualLegenda: atualPeriodo, compValor: C ? Fmt.num(C.ativos + ativosFuncC) : "", compLegenda: comp, semComparacao: "Não há dados no período anterior" }),
+      // Em cima: toda a base cadastrada (com ou sem compra); embaixo: quantos desses compraram no período filtrado.
+      sa1 ? UI.kpi({ rotulo: "Clientes cadastrados", valor: Fmt.num(nCadastrados),
+        detalhe: `Total de clientes com CNPJ e vendedor vinculado na base de clientes do SFA${filtrado ? ", dentro do filtro aplicado" : ""}`,
+        atualLegenda: dataSA1 ? `Cadastros até ${dataSA1}` : "", extra: regraCadastro(sa1),
+        // Válidos no período = clientes com CNPJ ativos + perdidos + pararam de comprar (status 7, sem cartão próprio); não se sobrepõem.
+        compValor: Fmt.num(S.ativos + R.ponte[5].clientes + R.ponte[7].clientes),
+        compLegenda: `Total de clientes com CNPJ e vendedor vinculado na base de clientes do SFA no período selecionado
+${atualPeriodo.includes(" - ") ? `De ${atualPeriodo.replace(" - ", " até ")}` : atualPeriodo}` }).replace("class=\"kpi", "class=\"kpi kpi-estatico") : "",
+      UI.kpi({ rotulo: "Clientes ativos", valor: parte("ativos", `<span class="tem-tooltip" data-tooltip-ativos>${Fmt.num(S.ativos + ativosFunc)}</span>`), detalhe: divisao("ativos", Fmt.num(S.ativos), Fmt.num(ativosFunc)), atual: S.ativos + ativosFunc, comparado: C ? C.ativos + ativosFuncC : undefined, atualLegenda: `Compraram pelo menos uma vez em ${atualPeriodo}`, compValor: C ? Fmt.num(C.ativos + ativosFuncC) : "", compLegenda: comp, semComparacao: "Não há dados no período anterior" }),
       UI.kpi({ rotulo: "Clientes perdidos", valor: parte("perdidos", Fmt.num(R.ponte[5].clientes + perdFunc)), detalhe: divisao("perdidos", Fmt.num(R.ponte[5].clientes), Fmt.num(perdFunc)), atual: R.ponte[5].clientes + perdFunc, comparado: cicloAnterior?.temC ? cicloAnterior.ponte[5].clientes + perdFuncAnt : undefined, inverter: true, atualLegenda: `Completaram 12 meses sem comprar em ${atualPeriodo}`, compValor: cicloAnterior?.temC ? Fmt.num(cicloAnterior.ponte[5].clientes + perdFuncAnt) : "", compLegenda: comp, semComparacao: cicloAnterior?.temC ? "" : "Não há dados no período anterior" }),
       UI.kpi({ rotulo: "Faturamento total", valor: parte("faturamento", Fmt.rsc(S.val)), detalhe: divisao("faturamento", Fmt.rsc(S.val - valFunc), Fmt.rsc(valFunc)), atual: S.val, comparado: C?.val, atualLegenda: atualPeriodo, compValor: C ? Fmt.rsc(C.val) : "", compLegenda: comp, semComparacao: "Não há dados no período anterior", heroi: true }),
       UI.kpi({ rotulo: "Pedidos realizados", valor: parte("pedidos", Fmt.num(S.ped)), atual: S.ped, comparado: C?.ped, atualLegenda: atualPeriodo, compValor: C ? Fmt.num(C.ped) : "", compLegenda: comp, semComparacao: "Não há dados no período anterior", detalhe: divisao("pedidos", Fmt.num(S.ped - pedFunc), Fmt.num(pedFunc)) }),
@@ -233,30 +274,30 @@ const Telas = (() => {
     if (alvoAtivos) {
       const linhasTip = [["Cresceram", ativosPorSituacao[0]], ["Reduziram compras", ativosPorSituacao[1]], ["Novos ou reativados", ativosPorSituacao[3]], ["Manteve / ajustes", ativosPorSituacao[2] + ativosPorSituacao[4] + ativosPorSituacao[5] + ativosPorSituacao[6]]]
         .filter(([, n]) => n).map(([nome, n]) => [nome, Fmt.num(n)]);
-      alvoAtivos.addEventListener("mousemove", (ev) => Graf.mostrarTooltip(ev, `Clientes válidos ativos: ${Fmt.num(S.ativos)}`, linhasTip));
+      alvoAtivos.addEventListener("mousemove", (ev) => Graf.mostrarTooltip(ev, `Clientes com CNPJ ativos: ${Fmt.num(S.ativos)}`, linhasTip));
       alvoAtivos.addEventListener("mouseleave", Graf.esconderTooltip);
     }
-    // Clique numa parte do cartão (número principal ou linha "Clientes válidos"/"Outros clientes") filtra a página pelos
-    // clientes que formam aquele número; os filtros se acumulam e clicar de novo tira. Outros clientes = funcionários (CPF).
+    // Clique numa parte do cartão (número principal ou linha "Clientes com CNPJ"/"Clientes pessoa física") filtra a página pelos
+    // clientes que formam aquele número; os filtros se acumulam e clicar de novo tira. Clientes pessoa física = funcionários (CPF).
     const R0 = semSelecao(R);
     const idsOnde = (cond) => { const ids = []; for (let c = 0; c < M.nC; c += 1) if (R0.cOK[c] && cond(c)) ids.push(c); return ids; };
     const func = (c) => R0.funcionario[c] === 1;
     const filtros = {
       ativos: ["Clientes ativos", () => idsOnde((c) => R0.cli.compraS[c])],
-      "ativos-validos": ["Clientes ativos: clientes válidos", () => idsOnde((c) => R0.cli.compraS[c] && !func(c))],
-      "ativos-outros": ["Clientes ativos: outros clientes", () => idsOnde((c) => R0.cli.compraS[c] && func(c))],
+      "ativos-validos": ["Clientes ativos: clientes com CNPJ", () => idsOnde((c) => R0.cli.compraS[c] && !func(c))],
+      "ativos-outros": ["Clientes ativos: clientes pessoa física", () => idsOnde((c) => R0.cli.compraS[c] && func(c))],
       perdidos: ["Clientes perdidos", () => idsOnde((c) => R0.status[c] === 5 || R0.cli.perdidoFunc[c])],
-      "perdidos-validos": ["Clientes perdidos: clientes válidos", () => idsOnde((c) => R0.status[c] === 5)],
-      "perdidos-outros": ["Clientes perdidos: outros clientes", () => idsOnde((c) => R0.cli.perdidoFunc[c] === 1)],
+      "perdidos-validos": ["Clientes perdidos: clientes com CNPJ", () => idsOnde((c) => R0.status[c] === 5)],
+      "perdidos-outros": ["Clientes perdidos: clientes pessoa física", () => idsOnde((c) => R0.cli.perdidoFunc[c] === 1)],
       faturamento: ["Clientes com faturamento no período", () => idsOnde((c) => R0.cli.valS[c] !== 0)],
-      "faturamento-validos": ["Faturamento: clientes válidos", () => idsOnde((c) => R0.cli.valS[c] !== 0 && !func(c))],
-      "faturamento-outros": ["Faturamento: outros clientes", () => idsOnde((c) => R0.cli.valS[c] !== 0 && func(c))],
+      "faturamento-validos": ["Faturamento: clientes com CNPJ", () => idsOnde((c) => R0.cli.valS[c] !== 0 && !func(c))],
+      "faturamento-outros": ["Faturamento: clientes pessoa física", () => idsOnde((c) => R0.cli.valS[c] !== 0 && func(c))],
       pedidos: ["Clientes com pedidos no período", () => idsOnde((c) => R0.cli.pedS[c] > 0)],
-      "pedidos-validos": ["Pedidos: clientes válidos", () => idsOnde((c) => R0.cli.pedS[c] > 0 && !func(c))],
-      "pedidos-outros": ["Pedidos: outros clientes", () => idsOnde((c) => R0.cli.pedS[c] > 0 && func(c))],
+      "pedidos-validos": ["Pedidos: clientes com CNPJ", () => idsOnde((c) => R0.cli.pedS[c] > 0 && !func(c))],
+      "pedidos-outros": ["Pedidos: clientes pessoa física", () => idsOnde((c) => R0.cli.pedS[c] > 0 && func(c))],
       produtos: ["Clientes com produtos faturados no período", () => idsOnde((c) => R0.cli.qS[c] !== 0)],
-      "produtos-validos": ["Produtos: clientes válidos", () => idsOnde((c) => R0.cli.qS[c] !== 0 && !func(c))],
-      "produtos-outros": ["Produtos: outros clientes", () => idsOnde((c) => R0.cli.qS[c] !== 0 && func(c))],
+      "produtos-validos": ["Produtos: clientes com CNPJ", () => idsOnde((c) => R0.cli.qS[c] !== 0 && !func(c))],
+      "produtos-outros": ["Produtos: clientes pessoa física", () => idsOnde((c) => R0.cli.qS[c] !== 0 && func(c))],
     };
     k.querySelectorAll("[data-sel]").forEach((alvoSel) => {
       const [rotulo, ids] = filtros[alvoSel.dataset.sel] || [];
@@ -289,7 +330,7 @@ const Telas = (() => {
     const filtrarVendedores = (ids) => window.dispatchEvent(new CustomEvent("painel:filtroMenu", { detail: { chave: "vendedor", ids } }));
     const tip = (l) => tipFaturamento(l, R, [["Participação no faturamento geral", Fmt.pct(l.partS)]]);
 
-    const c = UI.cartao("Desempenho dos vendedores", `${Fmt.esc(pAtual)} comparado com o ano anterior (${Fmt.esc(pAnterior)}).`);
+    const c = cartao("Desempenho dos vendedores", `${Fmt.esc(pAtual)} comparado com o ano anterior (${Fmt.esc(pAnterior)}).`);
     alvo.append(c);
     // Total dos vendedores; com vendedor filtrado, o clique tira o filtro.
     // Total geral (igual ao cartão Faturamento total), não só a soma dos vendedores com faturamento positivo.
@@ -356,7 +397,7 @@ const Telas = (() => {
     const grade = el("div", { class: "grade g2" });
     alvo.append(grade);
     // Top 5 categorias: rosca com a participação das 5 maiores no centro.
-    const c1 = UI.cartao("Top 5 categorias mais vendidas", `Participação no faturamento de ${Fmt.esc(pAtual)}.`);
+    const c1 = cartao("Top 5 categorias mais vendidas", `${Fmt.esc(pAtual)}.`);
     grade.append(c1);
     // Total da rosca (todas as categorias); com categoria filtrada, o clique tira o filtro.
     const catSel = R.f.categoria?.size ? [...R.f.categoria] : null;
@@ -370,7 +411,7 @@ const Telas = (() => {
     corpo1.append(Graf.pizza(corpo1, { fatias, tamanho: 230, fmtValor: Fmt.rs, rotulosFatias: true, centro: { linhas: ["Representatividade", "no faturamento"] } }));
 
     // Top 5 produtos: funil pelo faturamento.
-    const c2 = UI.cartao("Top 5 produtos mais vendidos", `Por faturamento em ${Fmt.esc(pAtual)}.`);
+    const c2 = cartao("Top 5 produtos mais vendidos", `${Fmt.esc(pAtual)}.`);
     grade.append(c2);
     totalCabecalho(c2, R, skus.slice(0, 5), null, "", "Faturamento dos 5 produtos");
     c2.append(Graf.funil(c2, { itens: skus.slice(0, 5).map((l, i) => ({ rotulo: l.nome, valor: l.valS, cor: CORES_TOP[i], texto: `${rsC(l.valS)} · ${Fmt.pct(l.partS, 1)} do faturamento · ${Fmt.num(l.qS)} un.`, tooltip: tip(l), onClick: () => abrirSku(l) })) }));
@@ -439,8 +480,8 @@ const Telas = (() => {
       .map((l, i) => ({ ...l, k: grupos[i].k }))
       .filter((l) => l.valS > 0 || l.valC > 0)
       .sort((a, b) => b.valS - a.valS);
-    if (!ls.length) { const vazio = UI.cartao("Desempenho por segmentação", `${Fmt.esc(atualPeriodo)} comparado com o ano anterior (${Fmt.esc(periodoAnterior)}).`); vazio.append(el("p", { class: "nota" }, "Sem faturamento para o filtro aplicado: R$ 0,00.")); alvo.append(vazio); return; }
-    const card = UI.cartao("Desempenho por segmentação", `${Fmt.esc(atualPeriodo)} comparado com o ano anterior (${Fmt.esc(periodoAnterior)}).`);
+    if (!ls.length) { const vazio = cartao("Desempenho por segmentação", `${Fmt.esc(atualPeriodo)} comparado com o ano anterior (${Fmt.esc(periodoAnterior)}).`); vazio.append(el("p", { class: "nota" }, "Sem faturamento para o filtro aplicado: R$ 0,00.")); alvo.append(vazio); return; }
+    const card = cartao("Desempenho por segmentação", `${Fmt.esc(atualPeriodo)} comparado com o ano anterior (${Fmt.esc(periodoAnterior)}).`);
     alvo.append(card);
     const sel = R.f.canal?.size ? R.f.canal : null;
     // Faturamento total (soma das segmentações do gráfico) no canto superior direito, para ver o todo.
@@ -453,8 +494,8 @@ const Telas = (() => {
       // Balão no formato dos cartões: total da segmentação (igual ao ADV) e, menor, a divisão em clientes válidos e outros
       // clientes (funcionários); linha divisória e o mesmo bloco do ano anterior; rodapé com a variação.
       tooltip: UI.tipCartao({
-        valor: Fmt.rs(l.valS), divisao: [["Clientes válidos", Fmt.rs(l.valS - l.funcS)], ["Outros clientes", Fmt.rs(l.funcS)]], periodo: atualPeriodo,
-        valorAnt: Fmt.rs(l.valC), divisaoAnt: [["Clientes válidos", Fmt.rs(l.valC - l.funcC)], ["Outros clientes", Fmt.rs(l.funcC)]], periodoAnt: periodoAnterior,
+        valor: Fmt.rs(l.valS), divisao: [["Clientes com CNPJ", Fmt.rs(l.valS - l.funcS)], ["Clientes pessoa física", Fmt.rs(l.funcS)]], periodo: atualPeriodo,
+        valorAnt: Fmt.rs(l.valC), divisaoAnt: [["Clientes com CNPJ", Fmt.rs(l.valC - l.funcC)], ["Clientes pessoa física", Fmt.rs(l.funcC)]], periodoAnt: periodoAnterior,
         rodape: `${UI.delta(l.valS, l.valC)} <span class="tc-dif ${sinal(l.delta)}">${Fmt.varRsCheio(l.delta)}</span>`,
         extras: [["Participação no faturamento", Fmt.pct(l.partS)], ["Clientes com compra", Fmt.num(l.ativosS)]],
       }),
@@ -492,12 +533,47 @@ const Telas = (() => {
     ].map((f) => ({ ...f, valor: -f.valor })); // a pizza trabalha com o tamanho da perda
     const ganhos = fatiasGanho.reduce((a, f) => a + f.valor, 0);
     const perdas = fatiasPerda.reduce((a, f) => a + f.valor, 0);
-    // Impacto % = variação do grupo ÷ |crescimento geral|; a soma das linhas fecha no crescimento geral.
+    // Contribuição no crescimento geral % = variação do faturamento do grupo ÷ |crescimento geral|; a soma das linhas fecha no crescimento geral.
     // Linhas das tabelas: data-sit = situações (ids do motor) cujos clientes formam o valor; o clique filtra a página.
     const sitGanhos = `0,3${outros > 0 ? ",2,6,7" : ""}`, sitPerdas = `1,5${outros < 0 ? ",2,6,7" : ""}`;
-    const contrib = (rotulo, valor, cor, sit) => `<tr class="clicavel" data-sit="${sit}" data-rotulo="${Fmt.esc(rotulo)}" title="Clique para filtrar a página por esses clientes"><td><i style="--c:${cor}"></i>${Fmt.esc(rotulo)}</td><td class="${sinal(valor)}">${crescimento ? Fmt.var(valor / Math.abs(crescimento), 0) : "—"}</td><td class="${sinal(valor)}">${Fmt.varRsCheio(valor)}</td></tr>`;
+    // Texto que explica o Impacto (usa os números do filtro aplicado). "crescimento" vira "queda" quando o resultado é negativo.
+    const resultado = crescimento >= 0 ? "crescimento" : "queda";
+    const noResultado = crescimento >= 0 ? "no crescimento" : "na queda";
+    const contrib = (rotulo, valor, cor, sit) => {
+      const pct = crescimento ? Fmt.var(valor / Math.abs(crescimento), 0) : "—";
+      // Balão da linha: a conta do impacto por extenso.
+      const explica = crescimento
+        ? `${rotulo}: ${valor >= 0 ? "trouxeram" : "tiraram"} ${Fmt.rs(Math.abs(valor))} em relação ao ano anterior. Isso equivale a ${pct} do ${resultado} geral de ${Fmt.rs(Math.abs(crescimento))}.`
+        : rotulo;
+      return `<tr class="clicavel" data-sit="${sit}" data-rotulo="${Fmt.esc(rotulo)}" title="${Fmt.esc(explica)}&#10;Clique para filtrar a página por esses clientes"><td><i style="--c:${cor}"></i>${Fmt.esc(rotulo)}</td><td class="${sinal(valor)}">${pct}</td><td class="${sinal(valor)}">${Fmt.varRsCheio(valor)}</td></tr>`;
+    };
 
-    const c = UI.cartao("Composição do crescimento geral", `${Fmt.esc(atualPeriodo)} comparado com o ano anterior (${Fmt.esc(periodoAnterior)}). Ganhos e perdas = faturamento do período − faturamento do ano anterior.`);
+    // Explicação do cartão (botão "Entenda o gráfico"): os mesmos textos que ficavam na tela, organizados e com cores.
+    const cor = (texto, c) => `<span style="color:${c};font-weight:600">${texto}</span>`;
+    const pos = (t) => `<span class="cor-pos">${t}</span>`, neg = (t) => `<span class="cor-neg">${t}</span>`;
+    const explica = `
+      <p>Compara o faturamento de ${Fmt.esc(atualPeriodo)} com o do mesmo período do ano anterior (${Fmt.esc(periodoAnterior)}). Ganhos e perdas = faturamento do período − faturamento do ano anterior.</p>
+      <h4>${pos(`Ganhos — ${Fmt.varRsCheio(ganhos)}`)}</h4>
+      <p><strong>Quanto cada grupo somou ao faturamento em relação ao ano anterior?</strong></p>
+      <ul><li>Grupos: ${cor("Clientes ativos que cresceram", COR_STATUS[0])} e ${cor("Clientes novos ou reativados", COR_STATUS[3])}.</li>
+        <li>O % é a fatia de cada grupo dentro do total de ganhos (${pos(Fmt.rs(ganhos))}); as fatias somam 100%.</li></ul>
+      <h4>${neg(`Perdas — ${Fmt.varRsCheio(-perdas)}`)}</h4>
+      <p><strong>Quanto cada grupo tirou do faturamento em relação ao ano anterior?</strong></p>
+      <ul><li>Grupos: ${cor("Clientes ativos que reduziram compras", COR_STATUS[1])} e ${cor("Clientes perdidos", COR_STATUS[5])}.</li>
+        <li>O % é a fatia de cada grupo dentro do total de perdas (${neg(Fmt.rs(perdas))}); as fatias somam 100%.</li></ul>
+      <h4>Fechamento</h4>
+      <p><strong>Quanto a empresa cresceu em relação ao ano anterior?</strong></p>
+      <ul><li>Crescimento geral = ${pos("ganhos")} − ${neg("perdas")}.</li>
+        <li>Variação % = ${resultado} (${Fmt.rs(Math.abs(crescimento))}) ÷ faturamento do ano anterior (${Fmt.rs(R.totC.val)}) = ${(crescimento >= 0 ? pos : neg)(Fmt.var(taxa(R.totS.val, R.totC.val)))}.</li></ul>
+      <h4>Contribuição por situação</h4>
+      <p><strong>Do ${resultado} geral, quanto cada grupo trouxe ou tirou?</strong></p>
+      <ul><li><strong>Variação do faturamento R$</strong> = faturamento do grupo no período − faturamento do mesmo grupo no ano anterior.</li>
+        <li><strong>Contribuição ${noResultado} geral %</strong> = variação do faturamento ÷ ${resultado} geral (${Fmt.rs(Math.abs(crescimento))}). Somando todos os grupos, o resultado é 100%.</li>
+        <li>Um grupo acima de 100% trouxe sozinho mais que o ${resultado} final; a diferença foi consumida pelos grupos negativos.</li>
+        <li>Não confundir com a <strong>Variação %</strong> do fechamento: ela compara com o faturamento do ano anterior, e a <strong>Contribuição ${noResultado} geral</strong> compara com o ${resultado}.</li></ul>
+      <h4>Como ler</h4>
+      <ul><li>Clique numa fatia, numa linha das tabelas ou no crescimento geral para filtrar a página por esses clientes; clique de novo para tirar.</li></ul>`;
+    const c = cartao("Composição do crescimento geral", `${Fmt.esc(atualPeriodo)} comparado com o ano anterior (${Fmt.esc(periodoAnterior)}).`, UI.botaoEntenda("Composição do crescimento geral", explica));
     totalCabecalho(c, R, [{ valS: R.totS.val, valC: R.totC.val }]);
     const pizzas = el("div", { class: "composicao" });
     const colGanho = el("div");
@@ -512,12 +588,12 @@ const Telas = (() => {
         <tr class="total clicavel" data-sit="0,1,2,3,5,6,7" data-rotulo="Crescimento geral" title="Clique para filtrar a página por esses clientes"><td>Crescimento geral</td><td class="${sinal(crescimento)}">${Fmt.var(taxa(R.totS.val, R.totC.val))}</td><td class="${sinal(crescimento)}">${Fmt.varRsCheio(crescimento)}</td></tr>
       </tbody></table></div>
       <div><h3>Contribuição por situação</h3>
-      <table class="tabela-contrib"><thead><tr><th>Grupo</th><th>Impacto %</th><th>Impacto R$</th></tr></thead><tbody>
+      <table class="tabela-contrib contrib-situacao"><thead><tr><th>Grupo</th><th>Contribuição ${crescimento >= 0 ? "no" : "na"}<br>${resultado} geral %</th><th>Variação do faturamento<br>em relação ao ano anterior R$</th></tr></thead><tbody>
         ${contrib("Clientes ativos que cresceram", P[0].delta, COR_STATUS[0], "0")}
         ${contrib("Clientes novos ou reativados", P[3].delta, COR_STATUS[3], "3")}
         ${contrib("Clientes ativos que reduziram compras", P[1].delta, COR_STATUS[1], "1")}
         ${contrib("Clientes perdidos", P[5].delta, COR_STATUS[5], "5")}
-        ${Math.abs(outros) > 0.5 ? contrib("Ajustes/devoluções", outros, COR_STATUS[6]) : ""}
+        ${Math.abs(outros) > 0.5 ? contrib("Ajustes/devoluções", outros, COR_STATUS[6], "2,6,7") : ""}
       </tbody></table></div>`);
     // Crescimento geral em destaque abaixo do fechamento.
     const destaque = el("div", { class: "crescimento-destaque" }, `<span class="rotulo">Crescimento geral</span><span class="valor">${Fmt.varRsCheio(crescimento)}</span>${UI.delta(R.totS.val, R.totC.val)}<span class="periodo">${Fmt.esc(atualPeriodo)} em relação ao ano anterior (${Fmt.esc(periodoAnterior)})</span>`);
@@ -574,16 +650,20 @@ const Telas = (() => {
     { chave: "demoMeses", titulo: "Meses com demonstradora", num: true, fmt: (v) => (v ? Fmt.num(v) : "—") },
   ] : []);
 
+  // Botão "Apenas lojas com atendimento" no topo direito (abas de clientes e de produtos): filtra o painel todo para as
+  // lojas com agenda de demonstradora no período; clicar de novo tira.
+  function botaoDemonstradora(R, alvo) {
+    if (!M.temDemonstradoras) return;
+    const barra = el("div", { class: "barra-aba" });
+    const ligado = Boolean(R.f.soDemonstradora);
+    barra.append(el("button", { type: "button", class: "btn btn-demonstradora", "aria-pressed": ligado ? "true" : "false",
+      title: "Lojas com agenda de demonstradora em pelo menos um mês do período (a comparação usa as mesmas lojas)",
+      onclick: () => window.dispatchEvent(new CustomEvent("painel:demonstradora")) }, ligado ? "✓ Apenas lojas com atendimento" : "Apenas lojas com atendimento"));
+    alvo.append(barra);
+  }
+
   function clientes(R, alvo, redesenhar) {
-    // Botão no topo direito: filtra o painel todo para as lojas com agenda de demonstradora no período; clicar de novo tira.
-    if (M.temDemonstradoras) {
-      const barra = el("div", { class: "barra-aba" });
-      const ligado = Boolean(R.f.soDemonstradora);
-      barra.append(el("button", { type: "button", class: "btn btn-demonstradora", "aria-pressed": ligado ? "true" : "false",
-        title: "Lojas com agenda de demonstradora em pelo menos um mês do período (a comparação usa as mesmas lojas)",
-        onclick: () => window.dispatchEvent(new CustomEvent("painel:demonstradora")) }, ligado ? "✓ Apenas lojas com atendimento" : "Apenas lojas com atendimento"));
-      alvo.append(barra);
-    }
+    botaoDemonstradora(R, alvo);
     avisoComparacao(R, alvo);
     analisesGerais(R, alvo);
     // Regras de classificação logo abaixo das análises gerais.
@@ -627,7 +707,7 @@ const Telas = (() => {
     const linhasTabela = linhas;
     if (R.temC) graficosClientes(R, alvo, linhas, filtrar);
     cartaoPenetracao(R, alvo, redesenhar); // penetração das categorias, logo após crescimento por segmentação
-    const tabela = UI.cartao("Análise detalhada dos clientes", `${rotuloSel ? Fmt.esc(Fmt.nome(rotuloSel)) : "Todos os clientes"}. Clique numa linha para filtrar o painel por esse cliente.`);
+    const tabela = cartao("Análise detalhada dos clientes", `${rotuloSel ? Fmt.esc(Fmt.nome(rotuloSel)) : "Todos os clientes"}.`);
     tabela.querySelector(".cabecalho-cartao").append(UI.alternador(opcoes, sitAtual, escolherSituacao));
     alvo.append(tabela);
     if (window.__rolarTabela) { window.__rolarTabela = false; requestAnimationFrame(() => tabela.scrollIntoView({ behavior: "smooth", block: "start" })); }
@@ -723,7 +803,7 @@ const Telas = (() => {
     const catsMedS = mediaCats(baseS, R.catsS), catsMedC = R.temC ? mediaCats(baseC, R.catsC) : null;
     const umaS = baseS.filter((c) => R.catsS[c] === 1).length, umaC = R.temC ? baseC.filter((c) => R.catsC[c] === 1).length : null;
 
-    const card = UI.cartao("Penetração das categorias nos clientes com compra", R.temC ? `${Fmt.esc(pAtual)} comparado com o ano anterior (${Fmt.esc(pAnterior)}).` : `${Fmt.esc(pAtual)}.`);
+    const card = cartao("Penetração das categorias nos clientes com compra", R.temC ? `${Fmt.esc(pAtual)} comparado com o ano anterior (${Fmt.esc(pAnterior)}).` : `${Fmt.esc(pAtual)}.`);
     alvo.append(card);
     const resumo = el("div", { class: "kpis kpis-compactos" });
     resumo.innerHTML = [
@@ -780,7 +860,7 @@ const Telas = (() => {
     // Tabela detalhada: um cliente ativo por linha e uma coluna por categoria (valor comprado no período ou "—").
     // Os cliques nos cartões e anéis de penetração rolam até aqui. Clique numa linha: filtra o painel pelo cliente.
     const cats = visiveis;
-    const tp = UI.cartao("Penetração por cliente e categoria");
+    const tp = cartao("Penetração por cliente e categoria");
     alvo.append(tp);
     const rotuloCliente = (r) => `Cliente: ${Fmt.nome(r.nome)}`;
     const linhasPen = baseS.map((c) => {
@@ -854,7 +934,7 @@ const Telas = (() => {
     const todoMesS = compradoresS.filter((c) => f.mesesS[c] === nS).length, todoMesC = R.temC ? compradoresC.filter((c) => f.mesesC[c] === nC).length : null;
     // Legenda: período atual e total, depois ano anterior e total.
     const legendaFreq = `${Fmt.esc(pAtual)}: <strong>${Fmt.num(compradoresS.length)} clientes</strong>${R.temC ? ` · Ano anterior (${Fmt.esc(pAnterior)}): <strong>${Fmt.num(compradoresC.length)} clientes</strong>` : ""}`;
-    const c = UI.cartao("Frequência de compra: clientes válidos por meses com compra", legendaFreq);
+    const c = cartao("Frequência de compra: clientes válidos por meses com compra", legendaFreq);
     alvo.append(c);
     const um = (v) => (v === null ? "—" : Fmt.num1(v));
     const resumo = el("div", { class: "kpis kpis-compactos resumo-frequencia" });
@@ -898,7 +978,7 @@ const Telas = (() => {
   // Clientes cadastrados (SA1 válida, 1 por nome fantasia) × compra no período: comprou = teve pedido ou nota de venda no período,
   // somando todos os cadastros do mesmo nome fantasia. Filtros de cliente do menu (UF, segmentação...) restringem a base;
   // vendedor e produto valem para a compra. Usado no card da aba de clientes e no filtro do cadastro geral.
-  const chaveNome = (v) => String(v || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  const chaveNome = Fmt.chaveNome;
   function compraCadastrados(R) {
     const g = M.D.cadastroGeral;
     if (!g) return null;
@@ -930,7 +1010,7 @@ const Telas = (() => {
     const d = compraCadastrados(R);
     if (!d) return;
     const pAtual = textoPeriodo(R.S);
-    const c = UI.cartao("Clientes válidos que compraram no período", `${Fmt.esc(pAtual)}.`);
+    const c = cartao("Clientes válidos que compraram no período", `${Fmt.esc(pAtual)}.`);
     alvo.append(c);
     // Clique: filtra a tabela de clientes da aba (não o cadastro geral) e rola até ela; clicar de novo tira o filtro.
     const abrir = (filtro) => {
@@ -956,7 +1036,7 @@ const Telas = (() => {
     // Unificação: cadastros válidos com o mesmo nome fantasia (sem acento, espaço e pontuação) são 1 cliente.
     // O primeiro pelo ID fica "Válido" (é o que conta nos clientes cadastrados); os demais ficam "Unificado" e apontam para ele.
     if (!linhasCadastro) {
-      const nomeChave = (v) => String(v || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+      const nomeChave = Fmt.chaveNome;
       linhasCadastro = g.linhas.map(([id, razao, fantasia, documento, cidade, uf, vendedor, valido, motivo]) => ({
         id, razao, fantasia, documento, cidade, uf, vendedor, classificacao: valido ? "Válido" : "Inválido", motivo: valido ? "" : motivo,
       }));
@@ -979,7 +1059,7 @@ const Telas = (() => {
     const nValidos = conta("Válido"), nUnif = conta("Unificado"), nInv = conta("Inválido");
     const porFiltro = { validos: "Válido", unificados: "Unificado", invalidos: "Inválido" };
     const linhas = porFiltro[filtroCadastro] ? noFiltro.filter((l) => l.classificacao === porFiltro[filtroCadastro]) : noFiltro;
-    const c = UI.cartao("Cadastro geral de clientes");
+    const c = cartao("Cadastro geral de clientes");
     c.querySelector(".cabecalho-cartao").append(UI.alternador([["todos", "Todos"], ["validos", `Válidos (${Fmt.num(nValidos)})`], ["unificados", `Unificados (${Fmt.num(nUnif)})`], ["invalidos", `Inválidos (${Fmt.num(nInv)})`]], filtroCadastro, (id) => { filtroCadastro = id; redesenhar(); }));
     alvo.append(c);
     const cClass = (v) => `<span class="delta ${v === "Válido" ? "sobe" : v === "Inválido" ? "desce" : ""}">${v}</span>`;
@@ -1029,7 +1109,7 @@ const Telas = (() => {
     alvo.append(grade);
 
     // 1. Quem mais puxou o crescimento e a queda.
-    const c1 = UI.cartao("Clientes que mais puxaram o crescimento e a queda");
+    const c1 = cartao("Clientes que mais puxaram o crescimento e a queda");
     grade.append(c1);
     const pos = linhas.filter((l) => l.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 10);
     const neg = linhas.filter((l) => l.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 10).reverse();
@@ -1039,7 +1119,7 @@ const Telas = (() => {
     ] })), divergente: true, larguraRotulo: 220, alturaBarra: 10, gap: 6 }));
 
     // 2. Distribuição por faixa de variação.
-    const c2 = UI.cartao("Distribuição dos clientes por faixa de variação");
+    const c2 = cartao("Distribuição dos clientes por faixa de variação");
     grade.append(c2);
     c2.append(Graf.barrasH(c2, { itens: FAIXAS_VARIACAO.map(([nome, teste, cor]) => {
       const g = linhas.filter(teste);
@@ -1056,7 +1136,7 @@ const Telas = (() => {
       porCanal.set(k, a);
     }
     const canaisLs = [...porCanal.values()].map((a) => ({ ...a, delta: a.valS - a.valC, var: taxa(a.valS, a.valC) })).sort((a, b) => b.delta - a.delta);
-    const c3 = UI.cartao("Crescimento ou queda por segmentação");
+    const c3 = cartao("Crescimento ou queda por segmentação");
     alvo.append(c3);
     c3.append(Graf.barrasH(c3, { itens: canaisLs.map((a) => ({ onClick: () => filtrar("canal", a.nome, a.nome), rotulo: a.nome, valor: a.delta, texto: rsCurto(a.delta), textoCor: `(${Fmt.var(a.var, 1)})`, tooltip: [
       [`Faturamento ${pAtual}`, Fmt.rs(a.valS)], [`Faturamento ${pAnterior}`, Fmt.rs(a.valC), "anterior"], ["Variação R$", Fmt.varRsCheio(a.delta)], ["Variação %", Fmt.var(a.var)],
@@ -1082,11 +1162,11 @@ const Telas = (() => {
 
     const grade = el("div", { class: "grade g2" });
     alvo.append(grade);
-    const rec = UI.cartao("Recência: há quanto tempo o cliente comprou pela última vez", `Contado até ${Fmt.mesLongo(fimS)} (fim do período), para clientes com compra no período ou na comparação.`);
+    const rec = cartao("Recência: há quanto tempo o cliente comprou pela última vez", `Contado até ${Fmt.mesLongo(fimS)} (fim do período), para clientes com compra no período ou na comparação.`);
     grade.append(rec);
     const faixas = [["No último mês", 0, 0], ["1 a 2 meses", 1, 2], ["3 a 5 meses", 3, 5], ["6 a 11 meses", 6, 11], ["12 meses ou mais", 12, 9999]];
     rec.append(Graf.barrasH(rec, { itens: faixas.map(([nome, a, b]) => { const g = ls.filter((l) => l.mesesSem !== null && l.mesesSem >= a && l.mesesSem <= b); return { rotulo: nome, valor: g.length, texto: Fmt.num(g.length), tooltip: [["Clientes", Fmt.num(g.length)], ["Faturamento na comparação", Fmt.rs0(g.reduce((s, l) => s + l.valC, 0))]] }; }), larguraRotulo: 140 }));
-    const exp = UI.cartao("Como cada cliente é classificado");
+    const exp = cartao("Como cada cliente é classificado");
     exp.append(el("div", { class: "explica" }, `<ul>
       <li><strong>Cresceu / Reduziu / Manteve:</strong> comprou no período e na comparação; compara o faturamento dos dois.</li>
       <li><strong>Novo:</strong> comprou no período e nunca tinha comprado antes do início dele.</li>
@@ -1095,7 +1175,7 @@ const Telas = (() => {
       </ul><p>Última compra e último pedido vêm da base de pedidos (data do faturamento e data do pedido). Com períodos curtos (1 mês) a classificação fica sensível à sazonalidade de compra; para analisar a base de clientes, prefira 3, 6 ou 12 meses.</p>`));
     grade.append(exp);
 
-    const t = UI.cartao("Rastreamento de clientes", "Filtre pela situação; a tabela traz a data e o valor da última compra e a data do último pedido.");
+    const t = cartao("Rastreamento de clientes", "Filtre pela situação; a tabela traz a data e o valor da última compra e a data do último pedido.");
     alvo.append(t);
     const opcoes = [[-1, "Todos"], ...R.ponte.filter((g) => g.i !== 6 && g.clientes).map((g) => [g.i, `${g.nome} (${Fmt.num(g.clientes)})`])];
     t.querySelector(".cabecalho-cartao").append(UI.alternador(opcoes, filtroStatus, (id) => { filtroStatus = id; redesenhar(); }));
@@ -1130,13 +1210,13 @@ const Telas = (() => {
       { rotulo: "Faturamento\nperíodo", valor: R.totS.val, total: true },
     ];
     const delta = R.totS.val - R.totC.val;
-    const c = UI.cartao("De onde veio o crescimento", `${textoPeriodo(R.S)} comparado com o ano anterior (${textoComp(R)}): ${Fmt.varRsCheio(delta)} (${Fmt.var(taxa(R.totS.val, R.totC.val))}).`);
+    const c = cartao("De onde veio o crescimento", `${textoPeriodo(R.S)} comparado com o ano anterior (${textoComp(R)}): ${Fmt.varRsCheio(delta)} (${Fmt.var(taxa(R.totS.val, R.totC.val))}).`);
     alvo.append(c);
     c.append(Graf.cascata(c, { passos, altura: 320 }));
     const ganho = P[3].delta + P[4].delta + P[0].delta, perda = P[1].delta + P[5].delta + P[7].delta;
     c.append(el("p", { class: "explica" }, `Ganhos: <strong>${Fmt.rs0(ganho)}</strong> (novos ${Fmt.rs0(P[3].delta)}, reativados ${Fmt.rs0(P[4].delta)}, crescimento da base ${Fmt.rs0(P[0].delta)}). Perdas: <strong>${Fmt.rs0(-perda)}</strong> (redução ${Fmt.rs0(-P[1].delta)}, clientes que deixaram de comprar ${Fmt.rs0(-P[5].delta)}).`));
 
-    const tg = UI.cartao("Resumo por situação do cliente");
+    const tg = cartao("Resumo por situação do cliente");
     alvo.append(tg);
     tg.append(UI.tabela({ busca: false, nomeArquivo: "origem_crescimento_resumo", linhas: P.filter((g) => g.clientes).map((g) => ({ nome: g.nome, st: g.i, clientes: g.clientes, valC: g.valC, valS: g.valS, delta: g.delta, pctDelta: delta ? g.delta / Math.abs(delta) : null })), ordem: { chave: "delta", desc: true }, colunas: [
       { chave: "nome", titulo: "Situação", fmt: (v, r) => selo(v, COR_STATUS[r.st]) }, { chave: "clientes", titulo: "Clientes", num: true, fmt: cNum }, { chave: "valC", titulo: "Fat. comparação", num: true, fmt: cRs },
@@ -1144,7 +1224,7 @@ const Telas = (() => {
     ] }));
 
     const dims = { canal: ["Segmentação", (cc) => M.dic.canal[M.clientes[cc].canal]], regiao: ["Região", (cc) => M.dic.regiao[M.clientes[cc].reg]], uf: ["UF", (cc) => M.dic.uf[M.clientes[cc].uf]], vendedor: ["Vendedor (cadastro)", (cc) => { const v = M.clientes[cc].vend; return v >= 0 ? M.vendedores[v].nome : "(sem vendedor)"; }], rede: ["Rede", (cc) => M.dic.rede[M.clientes[cc].rede]] };
-    const td = UI.cartao("Origem do crescimento por recorte", "Quanto cada grupo ganhou com novos/reativados e com clientes que cresceram, e quanto perdeu com redução e clientes que deixaram de comprar.");
+    const td = cartao("Origem do crescimento por recorte", "Quanto cada grupo ganhou com novos/reativados e com clientes que cresceram, e quanto perdeu com redução e clientes que deixaram de comprar.");
     td.querySelector(".cabecalho-cartao").append(UI.alternador(Object.entries(dims).map(([k, [n]]) => [k, n]), dimOrigem, (id) => { dimOrigem = id; redesenhar(); }));
     alvo.append(td);
     const [nomeDim, fn] = dims[dimOrigem];
@@ -1196,7 +1276,7 @@ const Telas = (() => {
   }
   function produtos(R, alvo, redesenhar) {
     avisoComparacao(R, alvo);
-    const cab = UI.cartao("Desempenho de produtos", "Volume em peças pagas (sem bonificação) e preço médio sem bonificação. Clique numa linha para ver a evolução mensal.");
+    const cab = cartao("Desempenho de produtos", "Volume em peças pagas (sem bonificação) e preço médio sem bonificação. Clique numa linha para ver a evolução mensal.");
     cab.querySelector(".cabecalho-cartao").append(UI.alternador([["produto", "Produto"], ["categoria", "Categoria (linha)"], ["familia", "Família"]], nivelProd, (id) => { nivelProd = id; itemSel = null; redesenhar(); }));
     alvo.append(cab);
     const ls = linhasProdutos(R, nivelProd);
@@ -1224,15 +1304,15 @@ const Telas = (() => {
       const meses = mesesGrafico(R);
       const idx = meses.map((p) => M.pIdx.get(p));
       const dest = meses.map((p, i) => (R.S.includes(p) ? i : -1)).filter((i) => i >= 0);
-      const c1 = UI.cartao(`Peças pagas por mês: ${item.nome}`);
-      const c2 = UI.cartao(`Preço médio por mês: ${item.nome}`);
+      const c1 = cartao(`Peças pagas por mês: ${item.nome}`);
+      const c2 = cartao(`Preço médio por mês: ${item.nome}`);
       det.append(c1, c2);
       alvo.append(det);
       c1.append(Graf.linhas(c1, { x: meses.map(Fmt.mes), series: [{ nome: "Peças pagas", valores: idx.map((i) => serie.qp[i]), cor: "var(--series-1)" }], fmtTip: Fmt.num, destaque: dest }));
       c2.append(Graf.linhas(c2, { x: meses.map(Fmt.mes), series: [{ nome: "Preço médio s/ bonif.", valores: idx.map((i) => (serie.qp[i] > 0 ? serie.val[i] / serie.qp[i] : null)), cor: "var(--series-2)" }], fmt: (v) => Fmt.num1(v), fmtTip: Fmt.rs, destaque: dest, zeroBase: false }));
     }
 
-    const t = UI.cartao("Tabela de produtos");
+    const t = cartao("Tabela de produtos");
     alvo.append(t);
     const colsProd = nivelProd === "produto" ? [{ chave: "cod", titulo: "Código" }, { chave: "nome", titulo: "Produto", classe: "texto-longo" }, { chave: "categoria", titulo: "Categoria" }, { chave: "familia", titulo: "Família" }, { chave: "lanc", titulo: "Lançamento (1ª venda)" }, { chave: "cadastro", titulo: "Cadastro" }]
       : [{ chave: "nome", titulo: nivelProd === "categoria" ? "Categoria" : "Família" }, { chave: "itens", titulo: "Produtos", num: true, fmt: cNum }];
@@ -1275,7 +1355,7 @@ const Telas = (() => {
         const pS = cs.reduce((s, c) => s + cli.pedS[c], 0), pC = cs.reduce((s, c) => s + cli.pedC[c], 0);
         return { nome, clientes: cs.length, valS: vS, valC: vC, delta: vS - vC, var: taxa(vS, vC), ticketS: div0(vS, pS), ticketC: div0(vC, pC), dTicket: pS && pC ? (vS / pS) / (vC / pC) - 1 : null, pedS: pS, pedC: pC, dPed: taxa(pS, pC) };
       });
-      const c = UI.cartao("Impacto da mudança de mix nos pedidos", `Clientes que compraram nos dois períodos (${Fmt.num(ambos.length)}), separados pela variação no número de categorias compradas.`);
+      const c = cartao("Impacto da mudança de mix nos pedidos", `Clientes que compraram nos dois períodos (${Fmt.num(ambos.length)}), separados pela variação no número de categorias compradas.`);
       alvo.append(c);
       c.append(Graf.barrasH(c, { itens: linhas.map((l) => ({ rotulo: l.nome, valor: l.dTicket ?? 0, texto: `${Fmt.var(l.dTicket)} no ticket`, tooltip: [["Clientes", Fmt.num(l.clientes)], ["Ticket médio", `${Fmt.rs0(l.ticketC)} → ${Fmt.rs0(l.ticketS)}`], ["Pedidos", `${Fmt.num(l.pedC)} → ${Fmt.num(l.pedS)}`], ["Faturamento", Fmt.varRsCheio(l.delta)]] })), divergente: true, fmt: Fmt.var, larguraRotulo: 200 }));
       c.append(UI.tabela({ busca: false, nomeArquivo: "mix_impacto", linhas, ordem: { chave: "delta", desc: true }, colunas: [
@@ -1295,7 +1375,7 @@ const Telas = (() => {
       const penS = div0(nS, ativosS.length), penC = R.temC ? div0(nCc, ativosC.length) : null;
       pen.push({ nome: M.dic.categoria[j], compradores: nS, penS, penC, dPen: R.temC ? penS - penC : null, partS: div0(vS, R.totS.val), partC: R.temC ? div0(vC, R.totC.val) : null, dPart: R.temC ? div0(vS, R.totS.val) - div0(vC, R.totC.val) : null, valS: vS, valC: vC, var: R.temC ? taxa(vS, vC) : null });
     }
-    const cp = UI.cartao("Mix por categoria", "Penetração = % dos clientes com compra no período que compraram a categoria. Participação = peso da categoria no faturamento.");
+    const cp = cartao("Mix por categoria", "Penetração = % dos clientes com compra no período que compraram a categoria. Participação = peso da categoria no faturamento.");
     alvo.append(cp);
     if (R.temC) cp.append(Graf.barrasH(cp, { itens: pen.filter((p) => p.compradores || p.penC).sort((a, b) => b.dPen - a.dPen).map((p) => ({ rotulo: p.nome, valor: p.dPen, texto: Fmt.pp(p.dPen), tooltip: [["Penetração", `${Fmt.pct(p.penC)} → ${Fmt.pct(p.penS)}`], ["Participação", `${Fmt.pct(p.partC)} → ${Fmt.pct(p.partS)}`]] })), divergente: true, fmt: Fmt.pp, larguraRotulo: 240, alturaBarra: 10, gap: 6 }));
     cp.append(UI.tabela({ busca: false, nomeArquivo: "mix_categorias", linhas: pen, ordem: { chave: "valS", desc: true }, colunas: [
@@ -1305,7 +1385,7 @@ const Telas = (() => {
       { chave: "valS", titulo: "Faturamento", num: true, fmt: cRs }, ...(R.temC ? [{ chave: "var", titulo: "Cresc. %", num: true, fmt: cVar }] : []),
     ] }));
 
-    const tc = UI.cartao("Mix por cliente", "Categorias compradas no período e na comparação, com as categorias que entraram e saíram do pedido do cliente.");
+    const tc = cartao("Mix por cliente", "Categorias compradas no período e na comparação, com as categorias que entraram e saíram do pedido do cliente.");
     alvo.append(tc);
     const linhasCli = [];
     for (let c = 0; c < M.nC; c += 1) {
@@ -1339,7 +1419,7 @@ const Telas = (() => {
     const e = r.ef;
     const delta = R.totS.val - R.totC.val;
     const nomeItem = nivelPvm === "produto" ? "produtos" : "categorias";
-    const c = UI.cartao("Quanto do crescimento veio de preço, de mix e de volume", `${textoPeriodo(R.S)} comparado com o ano anterior (${textoComp(R)}). Variação total: ${Fmt.varRsCheio(delta)}.`);
+    const c = cartao("Quanto do crescimento veio de preço, de mix e de volume", `${textoPeriodo(R.S)} comparado com o ano anterior (${textoComp(R)}). Variação total: ${Fmt.varRsCheio(delta)}.`);
     c.querySelector(".cabecalho-cartao").append(UI.alternador([["categoria", "Mix de categorias"], ["produto", "Mix de produtos"]], nivelPvm, (id) => { nivelPvm = id; redesenhar(); }));
     alvo.append(c);
     const passos = [
@@ -1369,10 +1449,10 @@ const Telas = (() => {
       porCat.set(cat, a);
     }
     const linhas = [...porCat.values()].map((a) => ({ ...a, precoS: div0(a.RS, a.QS), precoC: div0(a.RC, a.QC), dp: a.QS && a.QC ? (a.RS / a.QS) / (a.RC / a.QC) - 1 : null, dq: taxa(a.QS, a.QC) }));
-    const g = UI.cartao("Efeito preço por categoria", "Quanto o preço médio de cada categoria somou ou tirou do faturamento.");
+    const g = cartao("Efeito preço por categoria", "Quanto o preço médio de cada categoria somou ou tirou do faturamento.");
     alvo.append(g);
     g.append(Graf.barrasH(g, { itens: linhas.filter((l) => Math.abs(l.preco) > 1).sort((a, b) => b.preco - a.preco).map((l) => ({ rotulo: l.nome, valor: l.preco, texto: Fmt.varRs(l.preco), tooltip: [["Preço médio", `${Fmt.rs(l.precoC)} → ${Fmt.rs(l.precoS)}`], ["Var. preço", Fmt.var(l.dp)], ["Var. peças", Fmt.var(l.dq)]] })), divergente: true, larguraRotulo: 240, alturaBarra: 10, gap: 6 }));
-    const t = UI.cartao("Decomposição por categoria");
+    const t = cartao("Decomposição por categoria");
     alvo.append(t);
     t.append(UI.tabela({ nomeArquivo: `preco_mix_volume_${nivelPvm}`, linhas, ordem: { chave: "delta", desc: true }, colunas: [
       { chave: "nome", titulo: "Categoria" }, { chave: "RC", titulo: "Fat. comparação", num: true, fmt: cRs }, { chave: "RS", titulo: "Faturamento", num: true, fmt: cRs }, { chave: "delta", titulo: "Variação R$", num: true, fmt: cDRs },
@@ -1450,9 +1530,9 @@ const Telas = (() => {
     const skus = linhasAnaliseProdutos(R, "sku").filter((l) => Number.isFinite(l.impacto) && l.valS > 0 && l.valC > 0);
     const totalProd = cats.reduce((s, l) => s + Math.max(0, l.valS), 0);
     const impactoTotal = skus.reduce((s, l) => s + l.impacto, 0);
-    const c5 = UI.cartao("Maiores impactos do reajuste de preço por categoria", `${Fmt.esc(pAtual)} comparado com o ano anterior (${Fmt.esc(pAnterior)}).`);
+    const c5 = cartao("Maiores impactos do reajuste de preço por categoria", `${Fmt.esc(pAtual)} comparado com o ano anterior (${Fmt.esc(pAnterior)}).`);
     alvo.append(c5);
-    c5.append(el("div", { class: "crescimento-destaque destaque-reajuste" }, `<span class="rotulo">Impacto total do reajuste</span><span class="valor">${Fmt.varRsCheio(impactoTotal)}</span><span class="delta ${sinal(impactoTotal)}">${Fmt.pct(Math.abs(div0(impactoTotal, totalProd) || 0), 1)} do faturamento de produtos</span><span class="periodo">Quanto o faturamento mudou só pelo preço, nos SKUs vendidos nos dois períodos.</span>`));
+    c5.append(el("div", { class: "crescimento-destaque destaque-reajuste" }, `<span class="rotulo">Impacto total do reajuste</span><span class="valor">${Fmt.varRsCheio(impactoTotal)}</span><span class="delta ${sinal(impactoTotal)}">${Fmt.pct(Math.abs(div0(impactoTotal, totalProd) || 0), 1)} do faturamento de produtos</span>`));
     const maiores = cats.filter((l) => l.impacto > 0).sort((a, b) => b.impacto - a.impacto).slice(0, 5);
     const maxReaj = Math.max(...maiores.map((l) => l.reajuste), 0.01);
     const nReaj = (cat) => skus.filter((s) => s.cat === cat && s.reajuste > 0).length;
@@ -1463,6 +1543,7 @@ const Telas = (() => {
   }
 
   function analiseProdutos(R, alvo, redesenhar) {
+    botaoDemonstradora(R, alvo);
     avisoComparacao(R, alvo);
     analisesGerais(R, alvo);
     const pAtual = textoPeriodo(R.S), pAnterior = R.temC ? textoPeriodo(R.C) : "";
@@ -1490,12 +1571,12 @@ const Telas = (() => {
     // 1. Faturamento e crescimento/queda.
     const grade = el("div", { class: "grade g2" });
     alvo.append(grade);
-    const c1 = UI.cartao(`Faturamento por ${nomeNivel}`, R.temC ? `${Fmt.esc(pAtual)} comparado com o ano anterior (${Fmt.esc(pAnterior)}).` : "");
+    const c1 = cartao(`Faturamento por ${nomeNivel}`, R.temC ? `${Fmt.esc(pAtual)} comparado com o ano anterior (${Fmt.esc(pAnterior)}).` : "");
     grade.append(c1);
     const topo = ls.slice().sort((a, b) => b.valS - a.valS).slice(0, 20);
     c1.append(Graf.barrasH(c1, { itens: topo.map((l) => ({ onClick: cliqueLinha ? () => cliqueLinha(l) : null, rotulo: l.nome, valor: l.valS, texto: Fmt.rs(l.valS), textoCor: `(${Fmt.pct(l.partS, 1)})`, tooltip: tip(l) })), larguraRotulo: 230, alturaBarra: 10, gap: 6 }));
     if (R.temC) {
-      const c2 = UI.cartao(`Crescimento ou queda por ${nomeNivel}`, `${Fmt.esc(pAtual)} comparado com o ano anterior (${Fmt.esc(pAnterior)}).`);
+      const c2 = cartao(`Crescimento ou queda por ${nomeNivel}`, `${Fmt.esc(pAtual)} comparado com o ano anterior (${Fmt.esc(pAnterior)}).`);
       grade.append(c2);
       const pos = ls.filter((l) => l.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 10);
       const neg = ls.filter((l) => l.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 10).reverse();
@@ -1503,7 +1584,7 @@ const Telas = (() => {
     }
 
     // 2. Tabela: participação, crescimento, produtos faturados e preço médio.
-    const t = UI.cartao(`Participação e crescimento por ${nomeNivel}`);
+    const t = cartao(`Participação e crescimento por ${nomeNivel}`);
     alvo.append(t);
     const colsNome = sku ? [{ chave: "cod", titulo: "Código" }, { chave: "nome", titulo: "Produto", classe: "texto-longo" }, { chave: "categoria", titulo: "Categoria" }]
       : [{ chave: "nome", titulo: "Categoria", classe: "texto-longo" }, { chave: "itens", titulo: "SKUs com venda", num: true, fmt: cNum }];
@@ -1529,7 +1610,7 @@ const Telas = (() => {
     // 3. Reajuste de preço: por categoria/SKU e mês a mês.
     const grade2 = el("div", { class: "grade g2" });
     alvo.append(grade2);
-    const c3 = UI.cartao(sku ? "Maiores reajustes e reduções de preço por SKU" : "Reajuste de preço por categoria", `${Fmt.esc(pAtual)} comparado com o ano anterior (${Fmt.esc(pAnterior)}).`);
+    const c3 = cartao(sku ? "Maiores reajustes e reduções de preço por SKU" : "Reajuste de preço por categoria", `${Fmt.esc(pAtual)} comparado com o ano anterior (${Fmt.esc(pAnterior)}).`);
     grade2.append(c3);
     const comReaj = ls.filter((l) => Number.isFinite(l.reajuste) && l.valS > 0 && l.valC > 0);
     // SKU: só os 100 de maior faturamento, para não destacar itens com venda irrelevante.
@@ -1540,7 +1621,7 @@ const Telas = (() => {
     c3.append(Graf.barrasH(c3, { itens: itensReaj.map((l) => ({ onClick: cliqueLinha ? () => cliqueLinha(l) : null, rotulo: l.nome, valor: l.reajuste, texto: Fmt.var(l.reajuste, 1), tooltip: tip(l) })), divergente: true, fmt: (v) => Fmt.var(v, 1), larguraRotulo: 230, alturaBarra: 10, gap: 6 }));
 
     const meses = reajusteMensal(R);
-    const c4 = UI.cartao("Evolução do reajuste de preço", "Cada mês comparado com o mesmo mês do ano anterior.");
+    const c4 = cartao("Evolução do reajuste de preço", "Cada mês comparado com o mesmo mês do ano anterior.");
     grade2.append(c4);
     // Clique num mês: filtra o painel pelos SKUs vendidos no mês e no mesmo mês do ano anterior (base do reajuste do mês).
     const filtrarMes = (m) => selecionar(`Reajuste de ${Fmt.mes(m.per)}: SKUs vendidos em ${Fmt.mes(m.per)} e ${Fmt.mes(m.ant)}`, { produtos: m.prods });
@@ -1558,7 +1639,7 @@ const Telas = (() => {
 
     // Tabela de SKUs: preço, reajuste e impacto de cada produto (só a categoria clicada, se houver).
     const linhasReaj = reajCat === null ? skus : skus.filter((l) => l.cat === reajCat);
-    const tr = UI.cartao(reajCat === null ? "Impacto do reajuste por SKU" : `Impacto do reajuste por SKU: ${Fmt.nome(M.dic.categoria[reajCat])}`);
+    const tr = cartao(reajCat === null ? "Impacto do reajuste por SKU" : `Impacto do reajuste por SKU: ${Fmt.nome(M.dic.categoria[reajCat])}`);
     alvo.append(tr);
     alvo.insertBefore(t, tr); // as duas tabelas ficam no fim da aba, depois dos gráficos
     if (window.__rolarReajuste) { window.__rolarReajuste = false; requestAnimationFrame(() => tr.scrollIntoView({ behavior: "smooth", block: "start" })); }
@@ -1618,7 +1699,7 @@ const Telas = (() => {
   // outros clientes, período; linha divisória e o ano anterior; rodapé com a variação; situação e indicadores abaixo.
   const tipGeo = (l, R, situacao = null) => {
     const pAtual = textoPeriodo(R.S), pAnterior = R.temC ? textoPeriodo(R.C) : "";
-    const divisao = (v, f) => [["Clientes válidos", Fmt.rs(v - (f || 0))], ["Outros clientes", Fmt.rs(f || 0)]];
+    const divisao = (v, f) => [["Clientes com CNPJ", Fmt.rs(v - (f || 0))], ["Clientes pessoa física", Fmt.rs(f || 0)]];
     return UI.tipCartao({
       valor: Fmt.rs(l.valS), divisao: divisao(l.valS, l.funcS), periodo: pAtual,
       ...(R.temC ? { valorAnt: Fmt.rs(l.valC), divisaoAnt: divisao(l.valC, l.funcC), periodoAnt: pAnterior, rodape: `${UI.delta(l.valS, l.valC)} <span class="tc-dif ${sinal(l.delta)}">${Fmt.varRsCheio(l.delta)}</span>` } : {}),
@@ -1631,8 +1712,7 @@ const Telas = (() => {
     { chave: "valS", titulo: "Faturamento", num: true, fmt: cRs },
     ...(R.temC ? [{ chave: "valC", titulo: "Faturamento mesmo período ano anterior", num: true, anterior: true, fmt: cRs }, { chave: "delta", titulo: "Variação de faturamento R$", num: true, fmt: cDRs }, { chave: "var", titulo: "Variação de faturamento %", num: true, fmt: cVar }] : []),
     { chave: "partS", titulo: "Participação no faturamento geral", num: true, fmt: cPct },
-    { chave: "ativosS", titulo: "Clientes com compra", num: true, fmt: cNum },
-    ...(R.temC ? [{ chave: "ativosC", titulo: "Clientes com compra ano anterior", num: true, anterior: true, fmt: cNum }, { chave: "novos", titulo: "Novos ou reativados", num: true, fmt: cNum }, { chave: "perdidos", titulo: "Clientes perdidos", num: true, fmt: cNum }] : []),
+    ...colunasClientesSomam(R),
     { chave: "pedS", titulo: "Pedidos realizados", num: true, fmt: cNum },
     { chave: "ticketS", titulo: "Ticket médio por pedido", num: true, fmt: cRs },
   ];
@@ -1644,7 +1724,7 @@ const Telas = (() => {
     const anterior = R.temC ? `<span class="anterior">${Fmt.rs(totC)} · ${Fmt.esc(textoPeriodo(R.C))}</span>${UI.delta(totS, totC)}` : "";
     // Linhas com funcS (faturamento de funcionários): mostra a separação em clientes válidos e outros clientes.
     const funcS = ls.some((l) => l.funcS !== undefined) ? ls.reduce((s, l) => s + (l.funcS || 0), 0) : null;
-    const divisao = funcS === null ? "" : `<span class="divisao">Clientes válidos: <strong>${Fmt.rs(totS - funcS)}</strong> · Outros clientes: <strong>${Fmt.rs(funcS)}</strong></span>`;
+    const divisao = funcS === null ? "" : `<span class="divisao">Clientes com CNPJ: <strong>${Fmt.rs(totS - funcS)}</strong> · Clientes pessoa física: <strong>${Fmt.rs(funcS)}</strong></span>`;
     const total = el("div", { class: `total-cabecalho${limpar ? " clicavel" : ""}`, title: limpar ? dica : "" },
       `<span class="rotulo">${Fmt.esc(rotulo)}</span><span class="valor">${Fmt.rs(totS)}</span>${divisao}${anterior}`);
     if (limpar) total.addEventListener("click", limpar);
@@ -1665,7 +1745,7 @@ const Telas = (() => {
       contagem[sit.nome] += 1;
       dados[uf] = { cor: sit.cor, titulo: `${NOME_UF[uf] || uf} (${uf}) — ${sit.nome}`, tooltip: l && (l.valS || l.valC) ? tipGeo(l, R) : [["Sem vendas no período", ""]] };
     }
-    const c = UI.cartao(titulo, sub);
+    const c = cartao(titulo, sub);
     alvo.append(c);
     // Total dos estados do mapa; com um estado selecionado, o clique no total tira a seleção.
     const ufsSel = destaque ? [].concat(destaque instanceof Set ? [...destaque] : destaque) : [];
@@ -1738,7 +1818,7 @@ const Telas = (() => {
     const pri = linhasPor(R0, chavePri)
       .sort((a, b) => (a.nome === "Outras") - (b.nome === "Outras") || b.valS - a.valS)
       .map((l) => ({ ...l, uf: l.nome, nome: l.nome === "Outras" ? "Outras (demais estados)" : `${NOME_UF[l.nome] || l.nome} (${l.nome})` }));
-    const cp = UI.cartao("Regiões importantes");
+    const cp = cartao("Regiões importantes");
     alvo.append(cp);
     // Barra = faturamento; cor = situação (cresceu, caiu ou estável, igual ao mapa); % = participação no faturamento geral.
     cp.append(Graf.barrasH(cp, { itens: soSelecao(pri.map((l) => ({ ...l, chave: l.uf })), chavePri).map((l) => ({ onClick: () => cliquePri(l.uf), apagado: apagado(priMarcada(l.uf)), rotulo: l.nome, valor: l.valS, cor: situacaoUF(l, R0).cor, texto: Fmt.rs(l.valS), textoCor: `(${Fmt.pct(l.partS, 1)})`, tooltip: tipGeo(l, R0, situacaoUF(l, R0).nome) })), larguraRotulo: 220, alturaBarra: 12, gap: 8 }));
@@ -1749,7 +1829,7 @@ const Telas = (() => {
     const reg = linhasPor(R0, chaveReg);
     const regMarcada = (nome) => (geo?.tipo === "regiao" ? geo.valor === nome : Boolean(ufSel) && UF_REGIAO[ufSel] === nome);
     const cliqueReg = (nome) => nome !== "Sem UF" && selecionarRegiao(nome);
-    const cr = UI.cartao("Desempenho por região");
+    const cr = cartao("Desempenho por região");
     alvo.append(cr);
     // Mesmo padrão das regiões importantes: barra = faturamento, cor = situação, % = participação no faturamento geral.
     cr.append(Graf.barrasH(cr, { itens: soSelecao(reg, chaveReg).slice().sort((a, b) => b.valS - a.valS).map((l) => ({ onClick: l.nome !== "Sem UF" ? () => cliqueReg(l.nome) : null, apagado: apagado(regMarcada(l.nome)), rotulo: l.nome, valor: l.valS, cor: situacaoUF(l, R0).cor, texto: Fmt.rs(l.valS), textoCor: `(${Fmt.pct(l.partS, 1)})`, tooltip: tipGeo(l, R0, situacaoUF(l, R0).nome) })), larguraRotulo: 160, alturaBarra: 12, gap: 8 }));
@@ -1758,7 +1838,7 @@ const Telas = (() => {
     // Desempenho por estado: mapa + tabela.
     cartaoMapa(R0, alvo, { titulo: "Desempenho por estado", aoClicar: selecionarUF, destaque: ufsDestaque, visiveis: ufsVisiveis(R) });
     const est = linhasPor(R0, ufDoCliente).map((l) => ({ ...l, uf: l.nome, nome: l.nome === "Sem UF" ? "Sem UF" : `${NOME_UF[l.nome] || l.nome} (${l.nome})` }));
-    const ce = UI.cartao("Tabela por estado");
+    const ce = cartao("Tabela por estado");
     alvo.append(ce);
     ce.append(UI.tabela({ nomeArquivo: "desempenho_estado", linhas: soSelecao(est.map((l) => ({ ...l, chave: l.uf })), ufDoCliente), limite: 200, linhasVisiveis: 15, ordem: { chave: "valS", desc: true }, aoClicar: (r) => r.uf !== "Sem UF" && selecionarUF(r.uf), selecionada: (r) => (ufsDestaque instanceof Set ? ufsDestaque.has(r.uf) : r.uf === ufSel), colunas: colunasGeo("Estado", R0) }));
 
@@ -1766,7 +1846,7 @@ const Telas = (() => {
     const chaveCid = (c) => M.dic.municipio[M.clientes[c].mun] || "(sem cidade)";
     const cidades = soSelecao(linhasPor(R0, chaveCid), chaveCid);
     const local = ufSel ? `${NOME_UF[ufSel] || ufSel} (${ufSel})` : geo && geo.tipo !== "cidade" ? geo.rotulo : "";
-    const cc = UI.cartao(local ? `Desempenho por cidade: ${local}` : "Desempenho por cidade", local ? `${Fmt.num(cidades.length)} cidades.` : "");
+    const cc = cartao(local ? `Desempenho por cidade: ${local}` : "Desempenho por cidade", local ? `${Fmt.num(cidades.length)} cidades.` : "");
     if (ufSel || geo) cc.querySelector(".cabecalho-cartao").append(el("button", { type: "button", class: "btn ghost", onclick: () => filtrarGeo({ uf: null, geo: null }) }, "Ver todas as cidades"));
     alvo.append(cc);
     cc.append(UI.tabela({ nomeArquivo: ufSel ? `desempenho_cidades_${ufSel}` : "desempenho_cidades", linhas: cidades, limite: 200, linhasVisiveis: 20, ordem: { chave: "valS", desc: true }, aoClicar: (r) => selecionarCidade(r.nome), selecionada: (r) => geo?.tipo === "cidade" && geo.valor === r.nome, colunas: colunasGeo("Cidade/UF", R0) }));
@@ -1778,15 +1858,15 @@ const Telas = (() => {
     const ls = linhasGrupo(R, agruparClientes(R, (c) => M.dic.canal[M.clientes[c].canal]), (x) => x);
     const grade = el("div", { class: "grade g2" });
     alvo.append(grade);
-    const c1 = UI.cartao("Participação no faturamento por segmentação", "Segmentação comercial do cliente.");
+    const c1 = cartao("Participação no faturamento por segmentação", "Segmentação comercial do cliente.");
     grade.append(c1);
     c1.append(Graf.barrasH(c1, { itens: ls.slice().sort((a, b) => b.valS - a.valS).map((l) => ({ rotulo: l.nome, valor: l.partS, texto: Fmt.pct(l.partS), tooltip: [["Faturamento", Fmt.rs0(l.valS)], ["Participação ano anterior", Fmt.pct(l.partC)]] })), fmt: Fmt.pct }));
     if (R.temC) {
-      const c2 = UI.cartao("Contribuição de cada segmentação para o crescimento", "Pontos percentuais do crescimento total.");
+      const c2 = cartao("Contribuição de cada segmentação para o crescimento", "Pontos percentuais do crescimento total.");
       grade.append(c2);
       c2.append(Graf.barrasH(c2, { itens: ls.slice().sort((a, b) => b.contrib - a.contrib).map((l) => ({ rotulo: l.nome, valor: l.contrib, texto: Fmt.pp(l.contrib), textoCor: `(${Fmt.var(l.var)})`, tooltip: [["Cresc. R$", Fmt.varRsCheio(l.delta)], ["Cresc. %", Fmt.var(l.var)]] })), divergente: true, fmt: Fmt.pp }));
     }
-    const t = UI.cartao("Tabela por segmentação");
+    const t = cartao("Tabela por segmentação");
     alvo.append(t);
     t.append(UI.tabela({ nomeArquivo: "segmentacoes", busca: false, linhas: ls, ordem: { chave: "valS", desc: true }, colunas: colunasGrupo("Segmentação", R) }));
   }
@@ -1815,20 +1895,28 @@ const Telas = (() => {
     for (const [k, [vS, vC]] of vendCli) {
       const v = Math.floor(k / 8192), c = k % 8192;
       if (R.funcionario[c]) continue; // funcionário não entra na carteira
-      const a = porV.get(v) || { ativosS: 0, ativosC: 0, novos: 0, perdidos: 0 };
-      if (vS > 0) { a.ativosS += 1; if (status[c] === 3) a.novos += 1; }
-      if (vC > 0) { a.ativosC += 1; if (status[c] === 5) a.perdidos += 1; }
+      const a = porV.get(v) || { ativosS: 0, ativosC: 0, totCli: 0, sCresc: 0, sRed: 0, sSem: 0, sAj: 0, novos: 0, perdidos: 0 };
+      if (vS > 0) a.ativosS += 1;
+      if (vC > 0) a.ativosC += 1;
+      // Situação do cliente com o vendedor: mesma regra da Carteira de clientes (cada cliente em uma coluna; somam o total).
+      if (vS || vC) {
+        a.totCli += 1;
+        if (vS > 0) { if (status[c] === 3) a.novos += 1; else if (vS >= vC) a.sCresc += 1; else a.sRed += 1; }
+        else if (vC <= 0) a.sAj += 1;
+        else if (status[c] === 5) a.perdidos += 1;
+        else a.sSem += 1;
+      }
       porV.set(v, a);
     }
     const tS = R.totS.val;
     const ls = [];
     for (let v = 0; v < M.nV; v += 1) {
       if (!vend.valS[v] && !vend.valC[v] && !vend.pedS[v]) continue;
-      const a = porV.get(v) || { ativosS: 0, ativosC: 0, novos: 0, perdidos: 0 };
+      const a = porV.get(v) || { ativosS: 0, ativosC: 0, totCli: 0, sCresc: 0, sRed: 0, sSem: 0, sAj: 0, novos: 0, perdidos: 0 };
       let top = -1, vTop = 0;
       for (let j = 0; j < nCat; j += 1) if (vendCat.S[v * nCat + j] > vTop) { vTop = vendCat.S[v * nCat + j]; top = j; }
       ls.push({ v, nome: M.vendedores[v].nome, valS: vend.valS[v], valC: vend.valC[v], delta: vend.valS[v] - vend.valC[v], var: R.temC ? taxa(vend.valS[v], vend.valC[v]) : null,
-        partS: div0(vend.valS[v], tS), ativosS: a.ativosS, ativosC: a.ativosC, novos: a.novos, perdidos: a.perdidos,
+        partS: div0(vend.valS[v], tS), ativosS: a.ativosS, ativosC: a.ativosC, totCli: a.totCli, sCresc: a.sCresc, sRed: a.sRed, sSem: a.sSem, sAj: a.sAj, novos: a.novos, perdidos: a.perdidos,
         pedS: vend.pedS[v], pedC: vend.pedC[v], ticketS: div0(vend.valS[v], vend.pedS[v]), ticketC: div0(vend.valC[v], vend.pedC[v]),
         ticketProdS: div0(vend.valS[v], vend.qS[v]), ticketProdC: div0(vend.valC[v], vend.qC[v]),
         principal: top >= 0 ? M.dic.categoria[top] : "—", pPrincipal: div0(vTop, vend.valS[v]) });
@@ -1841,26 +1929,25 @@ const Telas = (() => {
 
     const grade = el("div", { class: "grade g2" });
     alvo.append(grade);
-    const c1 = UI.cartao("Faturamento por vendedor");
+    const c1 = cartao("Faturamento por vendedor");
     grade.append(c1);
     c1.append(Graf.barrasH(c1, { itens: ls.slice().sort((a, b) => b.valS - a.valS).slice(0, 20).map((l) => ({ onClick: () => selecionar(l.v), rotulo: l.nome, valor: l.valS, texto: Fmt.rs(l.valS), textoCor: `(${Fmt.pct(l.partS, 1)})`, tooltip: tip(l) })), larguraRotulo: 230, alturaBarra: 10, gap: 6 }));
     if (R.temC) {
-      const c2 = UI.cartao("Crescimento por vendedor");
+      const c2 = cartao("Crescimento por vendedor");
       grade.append(c2);
       const pos = ls.filter((l) => l.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 10);
       const neg = ls.filter((l) => l.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 10).reverse();
       c2.append(Graf.barrasH(c2, { itens: [...pos, ...neg].map((l) => ({ onClick: () => selecionar(l.v), rotulo: l.nome, valor: l.delta, texto: rsCurto(l.delta), textoCor: `(${Fmt.var(l.var, 1)})`, tooltip: tip(l) })), divergente: true, larguraRotulo: 230, alturaBarra: 10, gap: 6 }));
     }
 
-    const t = UI.cartao("Equipe comercial");
+    const t = cartao("Equipe comercial");
     alvo.append(t);
     t.append(UI.tabela({ nomeArquivo: "equipe_comercial", linhas: ls, limite: 200, linhasVisiveis: 20, ordem: { chave: "valS", desc: true }, aoClicar: (r) => selecionar(r.v), selecionada: (r) => r.v === vendSel, colunas: [
       { chave: "nome", titulo: "Vendedor", classe: "texto-longo" },
       { chave: "valS", titulo: "Faturamento", num: true, fmt: cRs },
       ...(R.temC ? [{ chave: "valC", titulo: "Faturamento mesmo período ano anterior", num: true, anterior: true, fmt: cRs }, { chave: "delta", titulo: "Variação de faturamento R$", num: true, fmt: cDRs }, { chave: "var", titulo: "Variação de faturamento %", num: true, fmt: cVar }] : []),
       { chave: "partS", titulo: "Participação no faturamento geral", num: true, fmt: cPct },
-      { chave: "ativosS", titulo: "Clientes com compra", num: true, fmt: cNum },
-      ...(R.temC ? [{ chave: "ativosC", titulo: "Clientes com compra ano anterior", num: true, anterior: true, fmt: cNum }, { chave: "novos", titulo: "Novos ou reativados", num: true, fmt: cNum }, { chave: "perdidos", titulo: "Clientes perdidos", num: true, fmt: cNum }] : []),
+      ...colunasClientesSomam(R),
       { chave: "pedS", titulo: "Pedidos realizados", num: true, fmt: cNum },
       ...(R.temC ? [{ chave: "pedC", titulo: "Pedidos ano anterior", num: true, anterior: true, fmt: cNum }] : []),
       { chave: "ticketS", titulo: "Ticket médio por pedido", num: true, fmt: cRs },
@@ -1897,23 +1984,21 @@ const Telas = (() => {
     }
     const totalCli = grupos.reduce((s, g) => s + g.n, 0), ativosCli = grupos[0].n + grupos[1].n + grupos[2].n;
     const nomeCart = selCart ? nomeProprio(selCart.nome) : (R.f.vendedor && R.f.vendedor.size ? nomeVendedoresFiltrados() : "toda a equipe");
-    const cc = UI.cartao(`Carteira de clientes: ${nomeCart}`);
+    const cc = cartao(`Carteira de clientes: ${nomeCart}`);
     if (selCart) cc.querySelector(".cabecalho-cartao").append(el("button", { type: "button", class: "btn ghost", onclick: () => { vendSel = null; window.__rolarMix = true; redesenhar(); } }, "Ver toda a equipe"));
     alvo.insertBefore(cc, grade); // carteira em primeiro, logo abaixo das análises gerais
     const resumo = el("div", { class: "kpis kpis-compactos" });
     resumo.innerHTML = [
       UI.kpi({ rotulo: "Total de clientes", valor: Fmt.num(totalCli), extra: "Compraram no período ou no ano anterior" }),
-      UI.kpi({ rotulo: "Clientes com compra", valor: Fmt.num(ativosCli), extra: "Compraram no período" }),
-      UI.kpi({ rotulo: "Novos ou reativados", valor: Fmt.num(grupos[2].n), extra: "Já incluídos nos clientes com compra" }),
+      UI.kpi({ rotulo: "Clientes que realizaram compras", valor: Fmt.num(ativosCli), extra: "Compraram no período (cresceram + reduziram + novos ou reativados)" }),
       UI.kpi({ rotulo: "Clientes perdidos", valor: Fmt.num(grupos[3].n), extra: "Completaram 12 meses sem comprar" }),
     ].join("");
     // Linha colorida no topo de cada cartão, com as mesmas cores da tabela de situação.
-    ["var(--muted-mark)", "var(--series-7)", grupos[2].cor, grupos[3].cor].forEach((cor, i) => { resumo.children[i].style.borderTop = `3px solid ${cor}`; });
+    ["var(--muted-mark)", "var(--series-7)", grupos[3].cor].forEach((cor, i) => { resumo.children[i].style.borderTop = `3px solid ${cor}`; });
     cc.append(resumo);
     cartoesClicaveis(resumo, [
       [`Carteira de ${nomeCart}: todos os clientes`, () => grupos.flatMap((g) => g.ids)],
-      [`Carteira de ${nomeCart}: clientes com compra`, () => [...grupos[0].ids, ...grupos[1].ids, ...grupos[2].ids]],
-      [`Carteira de ${nomeCart}: ${grupos[2].nome}`, () => grupos[2].ids],
+      [`Carteira de ${nomeCart}: clientes que realizaram compras`, () => [...grupos[0].ids, ...grupos[1].ids, ...grupos[2].ids]],
       [`Carteira de ${nomeCart}: ${grupos[3].nome}`, () => grupos[3].ids],
     ]);
     const linhaG = (g) => `<tr class="clicavel" data-grupo="${grupos.indexOf(g)}" title="Ver estes clientes na aba Análise por cliente"><td><i style="--c:${g.cor}"></i>${Fmt.esc(g.nome)}</td><td>${Fmt.num(g.n)}</td><td>${totalCli ? Fmt.pct(g.n / totalCli, 1) : "—"}</td><td class="${sinal(g.d)}">${R.temC ? Fmt.varRsCheio(g.d) : "—"}</td></tr>`;
@@ -1941,8 +2026,8 @@ const Telas = (() => {
     }
     const semVendaAtual = ativo && (sel ? sel.valS : totEqS) <= 0 && (sel ? sel.valC : totEqC) > 0;
     const titulo = sel ? `Mix vendido: ${nomeProprio(sel.nome)}` : filtroVend ? `Mix vendido: ${nomeVendedoresFiltrados()}` : "Mix vendido: Selecione o vendedor para analisar o mix";
-    const sub = !ativo ? "" : sel ? "Quanto cada categoria representa no faturamento do vendedor, comparado com a equipe." : "Quanto cada categoria representa no faturamento dos vendedores selecionados no menu.";
-    const c = UI.cartao(titulo, sub + (semVendaAtual ? " Sem faturamento no período atual; aparecem só as participações do ano anterior." : ""));
+    const sub = ""; // a explicação do mix fica no botão "Entenda o gráfico"
+    const c = cartao(titulo, sub + (semVendaAtual ? " Sem faturamento no período atual; aparecem só as participações do ano anterior." : ""));
     if (sel) c.querySelector(".cabecalho-cartao").append(el("button", { type: "button", class: "btn ghost", onclick: () => { vendSel = null; window.__rolarMix = true; redesenhar(); } }, "Limpar seleção"));
     alvo.append(c);
     const ordem = cats.sort((a, b) => (ativo ? b.vS - a.vS : b.nome.localeCompare(a.nome) * -1));
@@ -1964,7 +2049,7 @@ const Telas = (() => {
       porCadastroCli[M.clientes[F.c[i]].cadastro] += F.val[i] / 100;
     }
     const total = porCadastroCli[0] + porCadastroCli[1];
-    const c = UI.cartao("Cobertura dos cadastros", "Todo o faturamento entra no painel. Produtos e clientes fora do cadastro processado aparecem com as informações da própria base de faturamento.");
+    const c = cartao("Cobertura dos cadastros", "Todo o faturamento entra no painel. Produtos e clientes fora do cadastro processado aparecem com as informações da própria base de faturamento.");
     alvo.append(c);
     c.append(UI.tabela({ busca: false, nomeArquivo: "qualidade_produtos", linhas: [...porStatus].map(([st, v]) => ({ nome: M.dic.statusProduto[st], produtos: M.produtos.filter((p) => p.status === st).length, val: v, part: v / total })), ordem: { chave: "val", desc: true }, colunas: [
       { chave: "nome", titulo: "Situação do produto no cadastro" }, { chave: "produtos", titulo: "Produtos faturados", num: true, fmt: cNum }, { chave: "val", titulo: "Faturamento (toda a base)", num: true, fmt: cRs }, { chave: "part", titulo: "% do total", num: true, fmt: (v) => Fmt.pct(v, 2) },

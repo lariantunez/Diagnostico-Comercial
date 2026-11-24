@@ -8,7 +8,7 @@ const path = require("path");
 const origem = process.argv[2];
 if (!origem || !fs.existsSync(path.join(origem, "index.html"))) { console.error("Informe a pasta frontend do projeto original."); process.exit(1); }
 const destino = path.join(__dirname, "..", "painel");
-const ARQUIVOS = ["index.html", "css/app.css", "js/formato.js", "js/motor.js", "js/mapa-brasil.js", "js/graficos.js", "js/componentes.js", "js/telas.js", "js/app.js"];
+const ARQUIVOS = ["index.html", "css/app.css", "js/formato.js", "js/motor.js", "js/mapa-brasil.js", "js/graficos.js", "js/componentes.js", "js/explicacoes.js", "js/telas.js", "js/app.js"];
 
 // Trocas exatas: se o trecho não existir mais no original, a cópia para (para ninguém publicar um painel quebrado).
 const TROCAS = {

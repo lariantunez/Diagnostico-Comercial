@@ -465,7 +465,7 @@ const UI = (() => {
         const sort = ord.chave === c.chave ? (ord.desc ? "descending" : "ascending") : "none";
         // Título com no máximo 2 linhas: largura mínima ≈ metade do texto (títulos curtos ficam numa linha só).
         const largura = c.titulo.length <= 16 ? "" : ` style="min-width:${larguraDuasLinhas(c.titulo)}ch"`;
-        h += `<th class="${[c.num ? "num" : "", c.anterior ? "anterior" : ""].filter(Boolean).join(" ")}" data-k="${c.chave}" aria-sort="${sort}" title="${Fmt.esc(c.dica || "")}"${largura}>${Fmt.esc(c.titulo)}</th>`;
+        h += `<th class="${[c.num ? "num" : "", c.anterior ? "anterior" : "", /op-(igual|mais)/.exec(c.classe || "")?.[0] || ""].filter(Boolean).join(" ")}" data-k="${c.chave}" aria-sort="${sort}" title="${Fmt.esc(c.dica || "")}"${largura}>${Fmt.esc(c.titulo)}</th>`;
       }
       h += "</tr></thead><tbody>";
       if (!virtual) ls.forEach((r, i) => { h += linhaHtml(r, i); });
@@ -508,5 +508,17 @@ const UI = (() => {
 
   const legenda = (itens) => `<div class="legenda">${itens.map(([nome, cor]) => `<span><i style="--c:${cor}"></i>${Fmt.esc(nome)}</span>`).join("")}</div>`;
 
-  return { el, multi, seletorPeriodo, kpi, delta, tipCartao, cartao, alternador, tabela, legenda };
+  // Botão "Entenda o gráfico" (canto superior direito do cartão): abre uma janela com a explicação em HTML.
+  // Fecha no ×, no Esc ou clicando fora da janela.
+  function botaoEntenda(titulo, html, rotulo = "Entenda o gráfico") {
+    const janela = el("dialog", { class: "janela-explica" }, `<div class="janela-topo"><h3>${Fmt.esc(titulo)}</h3><button type="button" class="btn ghost janela-fechar" aria-label="Fechar">×</button></div><div class="janela-corpo">${html}</div>`);
+    janela.querySelector(".janela-fechar").addEventListener("click", () => janela.close());
+    janela.addEventListener("click", (ev) => { if (ev.target === janela) janela.close(); });
+    janela.addEventListener("close", () => janela.remove()); // o painel redesenha os cartões: não deixa janelas sobrando
+    // A janela fica dentro de .viz-root: é lá que as cores do tema (claro/escuro) estão definidas.
+    const botao = el("button", { type: "button", class: "btn btn-entenda", onclick: () => { if (!janela.isConnected) (document.querySelector(".viz-root") || document.body).append(janela); janela.showModal(); } }, rotulo);
+    return botao;
+  }
+
+  return { el, multi, seletorPeriodo, kpi, delta, tipCartao, cartao, alternador, tabela, legenda, botaoEntenda };
 })();

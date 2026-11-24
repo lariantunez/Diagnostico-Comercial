@@ -239,7 +239,7 @@ const Graf = (() => {
 
   // Rosca (pizza vazada). fatias: [{rotulo, valor >= 0, cor, tooltip}]; centro: {valor, legenda}.
   // Fatias separadas por 2px da cor do cartão; percentual direto na legenda ao lado.
-  function pizza(alvo, { fatias, centro = null, tamanho = 220, fmtValor = Fmt.rs0, tituloLegenda = "", sufixoPct = "", rotulosFatias = false }) {
+  function pizza(alvo, { fatias, centro = null, tamanho = 220, fmtValor = Fmt.rs0, tituloLegenda = "", pergunta = "", sufixoPct = "", rotulosFatias = false }) {
     const div = caixa(tamanho);
     div.classList.add("grafico-pizza");
     const total = fatias.reduce((a, f) => a + Math.max(0, f.valor), 0);
@@ -276,7 +276,7 @@ const Graf = (() => {
     // Valor completo no centro: a fonte diminui para o texto caber no furo da rosca (largura ≈ 0,55 × fonte por caractere).
     else if (centro) s += `<text class="centro-valor" x="${cx}" y="${cy + 2}" text-anchor="middle" style="font-size:${Math.min(18, (2 * r * 0.86) / (String(centro.valor).length * 0.55)).toFixed(1)}px">${Fmt.esc(centro.valor)}</text><text class="centro-legenda" x="${cx}" y="${cy + 20}" text-anchor="middle">${Fmt.esc(centro.legenda || "")}</text>`;
     s += "</svg>";
-    const leg = `<div class="legenda-pizza">${tituloLegenda ? `<h3>${tituloLegenda}</h3>` : ""}${fatias.map((f) => `<div class="item" style="--c:${f.cor}${CINZAS.includes(f.cor) ?";--c-pct:var(--text-secondary)" : ""}"><i></i><span class="nome">${Fmt.esc(Fmt.nome(f.rotulo))}</span><span class="pct">${total ? Fmt.pct(Math.max(0, f.valor) / total, 1) : "—"}${sufixoPct}</span><span class="valor">${fmtValor(f.valor)}</span></div>`).join("")}</div>`;
+    const leg = `<div class="legenda-pizza">${tituloLegenda ? `<h3>${tituloLegenda}</h3>` : ""}${pergunta ? `<p class="pergunta-grafico">${pergunta}</p>` : ""}${fatias.map((f) => `<div class="item" style="--c:${f.cor}${CINZAS.includes(f.cor) ?";--c-pct:var(--text-secondary)" : ""}"><i></i><span class="nome">${Fmt.esc(Fmt.nome(f.rotulo))}</span><span class="pct">${total ? Fmt.pct(Math.max(0, f.valor) / total, 1) : "—"}${sufixoPct}</span><span class="valor">${fmtValor(f.valor)}</span></div>`).join("")}</div>`;
     div.innerHTML = s + leg;
     ligarHover(div, fatias.map((f) => ({ titulo: f.rotulo, onClick: f.onClick, tooltip: f.tooltip || [["Valor", fmtValor(f.valor)], ["Participação", total ? Fmt.pct(Math.max(0, f.valor) / total, 1) : "—"]] })));
     return div;

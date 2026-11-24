@@ -28,9 +28,15 @@ const Fmt = (() => {
       return baixo.replace(/\p{L}/u, (c) => c.toUpperCase());
     }).join("");
   }
+  // Chave do cliente (mesmo nome fantasia = mesmo cliente): sem acento, espaço e pontuação. O sufixo de cadastro de
+  // demonstradora ("EMY ARARAQUARA - DEMONST. 01", "PERFUMARIA CIBELE - DEMONS. 1") é a mesma loja (decisão de 05/11/2026).
+  // Mesma regra no backend (carregar-fatos-mongodb.js e exportar-painel-mongodb.js).
+  const chaveNome = (v) => String(v || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase()
+    .replace(/[^A-Z0-9]+/g, " ").trim().replace(/ DEMONS(T|TRADORA)? ?\d*$/, "").replace(/ /g, "");
   return {
     MESES,
     nome,
+    chaveNome,
     rs: (v) => (ok(v) ? `R$ ${n2.format(v)}` : "—"),
     rs0: (v) => (ok(v) ? `R$ ${n2.format(v)}` : "—"),
     // Ticket médio por produto com 4 casas (pedido do usuário, 30/10/2026).
