@@ -159,11 +159,12 @@ window.EXPLICACOES = [
 
   // ---------- Análise da Equipe Comercial ----------
   { titulo: "Carteira de clientes",
-    o_que: "Separa os clientes da equipe (ou do vendedor escolhido) pela situação de compra com o vendedor.",
-    pergunta: "Quantos clientes da carteira cresceram, reduziram, são novos ou reativados, foram perdidos ou não compraram no período?",
-    conta: ["Com compra no período: novo ou reativado (primeira compra ou volta após 12 meses ou mais sem comprar); senão cresceu (faturamento igual ou maior que no mesmo período do ano anterior) ou reduziu compras (menor).",
-      "Sem compra no período: perdido (completou 12 meses sem comprar dentro do período), sem compra com o vendedor no período, ou ajustes/devoluções (só devolução ou crédito nos dois períodos).",
-      "Total de clientes = soma de todas as situações. Clientes que realizaram compras = cresceram + reduziram + novos ou reativados. Variação de faturamento R$ = faturamento do grupo no período − no mesmo período do ano anterior. Clientes pessoa física ficam fora."],
+    o_que: "Separa os clientes com CNPJ da equipe (ou dos vendedores do filtro) pela situação de compra, com a mesma regra das Análises gerais e da Movimentação da carteira.",
+    pergunta: "Quantos clientes da carteira cresceram, reduziram, são novos ou reativados, foram perdidos ou ainda não compraram no período?",
+    conta: ["Comprou = teve pedido ou nota de venda no mês. Com compra no período: novo ou reativado (primeira compra ou volta após 12 meses ou mais sem comprar); senão cresceu ou se manteve (faturamento igual ou maior que no mesmo período do ano anterior) ou reduziu compras (menor).",
+      "Sem compra no período: perdido (completou 12 meses sem comprar dentro do período) ou sem compra no período (comprou no ano anterior e ainda não completou 12 meses sem comprar; só aparece em períodos menores que 12 meses).",
+      "Total de clientes = realizaram compras + perdidos (+ sem compra no período). É o mesmo número de baixo do cartão Clientes cadastrados. Realizaram compras = Clientes ativos com CNPJ; perdidos = Clientes perdidos com CNPJ.",
+      "Ajustes/devoluções (só devolução ou crédito nos dois períodos) aparecem abaixo do total, fora da contagem de clientes. Variação de faturamento R$ = faturamento do grupo no período − no mesmo período do ano anterior. Clientes pessoa física ficam fora."],
     como_ler: ["Clique num cartão para filtrar a página por esses clientes.", "Clique numa linha da tabela para abrir esses clientes na aba Análise por cliente."] },
   { titulo: "Faturamento por vendedor",
     o_que: "Mostra os 20 vendedores que mais faturaram no período.",

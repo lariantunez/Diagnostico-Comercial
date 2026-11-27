@@ -1957,56 +1957,56 @@ ${atualPeriodo.includes(" - ") ? `De ${atualPeriodo.replace(" - ", " até ")}` :
       { chave: "principal", titulo: "Categoria principal" }, { chave: "pPrincipal", titulo: "% da categoria principal", num: true, fmt: cPct },
     ] }));
 
-    // Carteira de clientes do vendedor selecionado (ou da equipe/filtro): situação pelo que o cliente comprou com o vendedor.
-    const selCart = ls.find((l) => l.v === vendSel);
-    const vendOK = new Set((selCart ? [selCart] : ls).map((l) => l.v));
-    const porCliente = new Map();
-    for (const [k, [vS, vC]] of vendCli) {
-      const v = Math.floor(k / 8192), cl = k % 8192;
-      if (!vendOK.has(v) || R.funcionario[cl]) continue;
-      const a = porCliente.get(cl) || [0, 0];
-      a[0] += vS; a[1] += vC;
-      porCliente.set(cl, a);
-    }
+    // Carteira de clientes da equipe (ou dos vendedores do filtro do menu): mesma classificação das Análises gerais e da
+    // Movimentação da carteira (regra oficial: comprou = pedido ou nota de venda no mês; decisão de 27/11/2026), para os
+    // totais sempre baterem: Total = realizaram compras + perdidos (+ sem compra no período) = número de baixo de
+    // "Clientes cadastrados". Clientes com CNPJ (sem pessoa física). Só devolução/crédito nos dois períodos fica fora do
+    // total de clientes (não é ativo nem perdido) e aparece abaixo do total, só para a variação em R$ fechar.
     const grupos = [
-      { nome: "Clientes ativos que cresceram", cor: COR_STATUS[0], n: 0, d: 0, ids: [] },
-      { nome: "Clientes ativos que reduziram compras", cor: COR_STATUS[1], n: 0, d: 0, ids: [] },
-      { nome: "Clientes novos ou reativados", cor: COR_STATUS[3], n: 0, d: 0, ids: [] },
-      { nome: "Clientes perdidos", cor: COR_STATUS[5], n: 0, d: 0, ids: [] },
-      { nome: "Sem compra com o vendedor no período", cor: COR_STATUS[2], n: 0, d: 0, ids: [] },
-      { nome: "Ajustes/devoluções", cor: COR_STATUS[6], n: 0, d: 0, ids: [] },
+      { nome: "Clientes ativos que cresceram ou se mantiveram estáveis", cor: COR_STATUS[0], st: [0, 2], n: 0, d: 0, ids: [] },
+      { nome: "Clientes ativos que reduziram compras", cor: COR_STATUS[1], st: [1], n: 0, d: 0, ids: [] },
+      { nome: "Clientes ativos novos ou reativados", cor: COR_STATUS[3], st: [3, 4], n: 0, d: 0, ids: [] },
+      { nome: "Clientes perdidos", cor: COR_STATUS[5], st: [5], n: 0, d: 0, ids: [] },
+      { nome: "Sem compra no período (ainda não completaram 12 meses sem comprar)", cor: COR_STATUS[2], st: [7], n: 0, d: 0, ids: [] },
     ];
-    for (const [cl, [vS, vC]] of porCliente) {
-      if (!vS && !vC) continue;
-      // Só devolução/crédito nos dois períodos entra em ajustes, para o total fechar com a variação de faturamento.
-      const g = vS > 0 ? (status[cl] === 3 ? 2 : vS >= vC ? 0 : 1) : vC <= 0 ? 5 : status[cl] === 5 ? 3 : 4;
-      grupos[g].n += 1; grupos[g].d += vS - vC; grupos[g].ids.push(cl);
+    const ajustes = { nome: "Ajustes/devoluções (sem compra nos dois períodos; fora do total de clientes)", cor: COR_STATUS[6], n: 0, d: 0, ids: [] };
+    const grupoDe = new Map(grupos.flatMap((g) => g.st.map((st) => [st, g])));
+    for (let cl = 0; cl < M.nC; cl += 1) {
+      if (!R.cOK[cl] || R.funcionario[cl]) continue;
+      const dv = R.cli.valS[cl] - R.cli.valC[cl], g = grupoDe.get(status[cl]);
+      if (g && (status[cl] === 5 || status[cl] === 7 || R.cli.ativoS[cl])) { g.n += 1; g.d += dv; g.ids.push(cl); }
+      else if (R.cli.valS[cl] || R.cli.valC[cl]) { ajustes.n += 1; ajustes.d += dv; ajustes.ids.push(cl); }
     }
-    const totalCli = grupos.reduce((s, g) => s + g.n, 0), ativosCli = grupos[0].n + grupos[1].n + grupos[2].n;
-    const nomeCart = selCart ? nomeProprio(selCart.nome) : (R.f.vendedor && R.f.vendedor.size ? nomeVendedoresFiltrados() : "toda a equipe");
+    const ativosCli = grupos[0].n + grupos[1].n + grupos[2].n, semCompra = grupos[4].n;
+    const totalCli = grupos.reduce((s, g) => s + g.n, 0);
+    const nomeCart = R.f.vendedor && R.f.vendedor.size ? nomeVendedoresFiltrados() : "toda a equipe";
     const cc = cartao(`Carteira de clientes: ${nomeCart}`);
-    if (selCart) cc.querySelector(".cabecalho-cartao").append(el("button", { type: "button", class: "btn ghost", onclick: () => { vendSel = null; window.__rolarMix = true; redesenhar(); } }, "Ver toda a equipe"));
     alvo.insertBefore(cc, grade); // carteira em primeiro, logo abaixo das análises gerais
     const resumo = el("div", { class: "kpis kpis-compactos" });
     resumo.innerHTML = [
-      UI.kpi({ rotulo: "Total de clientes", valor: Fmt.num(totalCli), extra: "Compraram no período ou no ano anterior" }),
+      UI.kpi({ rotulo: "Total de clientes", valor: Fmt.num(totalCli), extra: semCompra ? "Realizaram compras + perdidos + sem compra no período" : "Realizaram compras + perdidos" }),
       UI.kpi({ rotulo: "Clientes que realizaram compras", valor: Fmt.num(ativosCli), extra: "Compraram no período (cresceram + reduziram + novos ou reativados)" }),
       UI.kpi({ rotulo: "Clientes perdidos", valor: Fmt.num(grupos[3].n), extra: "Completaram 12 meses sem comprar" }),
+      ...(semCompra ? [UI.kpi({ rotulo: "Sem compra no período", valor: Fmt.num(semCompra), extra: "Compraram no ano anterior e ainda não completaram 12 meses sem comprar" })] : []),
     ].join("");
     // Linha colorida no topo de cada cartão, com as mesmas cores da tabela de situação.
-    ["var(--muted-mark)", "var(--series-7)", grupos[3].cor].forEach((cor, i) => { resumo.children[i].style.borderTop = `3px solid ${cor}`; });
+    ["var(--muted-mark)", "var(--series-7)", grupos[3].cor, grupos[4].cor].slice(0, resumo.children.length).forEach((cor, i) => { resumo.children[i].style.borderTop = `3px solid ${cor}`; });
     cc.append(resumo);
     cartoesClicaveis(resumo, [
       [`Carteira de ${nomeCart}: todos os clientes`, () => grupos.flatMap((g) => g.ids)],
       [`Carteira de ${nomeCart}: clientes que realizaram compras`, () => [...grupos[0].ids, ...grupos[1].ids, ...grupos[2].ids]],
       [`Carteira de ${nomeCart}: ${grupos[3].nome}`, () => grupos[3].ids],
+      ...(semCompra ? [[`Carteira de ${nomeCart}: ${grupos[4].nome}`, () => grupos[4].ids]] : []),
     ]);
-    const linhaG = (g) => `<tr class="clicavel" data-grupo="${grupos.indexOf(g)}" title="Ver estes clientes na aba Análise por cliente"><td><i style="--c:${g.cor}"></i>${Fmt.esc(g.nome)}</td><td>${Fmt.num(g.n)}</td><td>${totalCli ? Fmt.pct(g.n / totalCli, 1) : "—"}</td><td class="${sinal(g.d)}">${R.temC ? Fmt.varRsCheio(g.d) : "—"}</td></tr>`;
-    cc.append(el("div", { class: "tabela-carteira" }, `<table class="tabela-contrib"><thead><tr><th>Situação</th><th>Clientes</th><th>% dos clientes</th><th>Variação de faturamento R$</th></tr></thead><tbody>${grupos.filter((g) => g.n).map(linhaG).join("")}<tr class="total clicavel" data-grupo="todos" title="Ver estes clientes na aba Análise por cliente"><td>Total</td><td>${Fmt.num(totalCli)}</td><td>100%</td><td class="${sinal(grupos.reduce((s, g) => s + g.d, 0))}">${R.temC ? Fmt.varRsCheio(grupos.reduce((s, g) => s + g.d, 0)) : "—"}</td></tr></tbody></table>`));
+    const todosGrupos = [...grupos, ajustes];
+    const linhaG = (g) => `<tr class="clicavel" data-grupo="${todosGrupos.indexOf(g)}" title="Ver estes clientes na aba Análise por cliente"><td><i style="--c:${g.cor}"></i>${Fmt.esc(g.nome)}</td><td>${Fmt.num(g.n)}</td><td>${g === ajustes ? "—" : totalCli ? Fmt.pct(g.n / totalCli, 1) : "—"}</td><td class="${sinal(g.d)}">${R.temC ? Fmt.varRsCheio(g.d) : "—"}</td></tr>`;
+    const dTotal = grupos.reduce((s, g) => s + g.d, 0);
+    // Sem compra no período aparece sempre que houver clientes; as quatro situações principais aparecem mesmo zeradas.
+    cc.append(el("div", { class: "tabela-carteira" }, `<table class="tabela-contrib"><thead><tr><th>Situação</th><th>Clientes</th><th>% dos clientes</th><th>Variação de faturamento R$</th></tr></thead><tbody>${grupos.filter((g, k) => k < 4 || g.n).map(linhaG).join("")}<tr class="total clicavel" data-grupo="todos" title="Ver estes clientes na aba Análise por cliente"><td>Total</td><td>${Fmt.num(totalCli)}</td><td>100%</td><td class="${sinal(dTotal)}">${R.temC ? Fmt.varRsCheio(dTotal) : "—"}</td></tr>${ajustes.n ? linhaG(ajustes) : ""}</tbody></table>`));
     // Clique numa linha: abre a aba de clientes com a tabela filtrada nesses clientes.
     cc.querySelectorAll("tr.clicavel").forEach((tr) => tr.addEventListener("click", () => {
-      const k = tr.dataset.grupo, ids = k === "todos" ? grupos.flatMap((g) => g.ids) : grupos[Number(k)].ids;
-      const rotulo = `Carteira de ${nomeCart}: ${k === "todos" ? "todos os clientes" : grupos[Number(k)].nome}`;
+      const k = tr.dataset.grupo, ids = k === "todos" ? grupos.flatMap((g) => g.ids) : todosGrupos[Number(k)].ids;
+      const rotulo = `Carteira de ${nomeCart}: ${k === "todos" ? "todos os clientes" : todosGrupos[Number(k)].nome}`;
       selecionar(rotulo, { clientes: ids, aba: "clientes" });
     }));
 
