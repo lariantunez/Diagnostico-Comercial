@@ -84,7 +84,11 @@ const Telas = (() => {
     if (!R.temC) alvo.append(el("p", { class: "aviso" }, "<strong>Sem período de comparação para o ano anterior.</strong>"));
   }
   function avisoPedidos(R, alvo) {
-    if (R.filtroProduto) alvo.append(el("p", { class: "aviso" }, "<strong>Filtro de família/categoria ativo:</strong> a base de pedidos não tem produto, então <strong>pedidos e ticket médio</strong> consideram todos os produtos do cliente."));
+    if (!R.filtroProduto) return;
+    // Nome dos filtros de produto ativos: "produtos lançados", "categoria", "família" e/ou "produto selecionado".
+    const nomes = [R.lancadosAtivo && "produtos lançados", R.f.categoria?.size && "categoria", R.f.familia?.size && "família", R.f.selecao?.produtos && "produto selecionado"].filter(Boolean);
+    const qual = nomes.length > 1 ? `${nomes.slice(0, -1).join(", ")} e ${nomes.at(-1)}` : nomes[0] || "produto";
+    alvo.append(el("p", { class: "aviso" }, `<strong>${nomes.length > 1 ? `Filtros de ${qual} ativos` : `Filtro de ${qual} ativo`}:</strong> os números mostram só esses produtos. Pedidos e ticket médio por pedido ficam em “—”, porque cada pedido também traz outros produtos.`));
   }
 
   // Meses exibidos nos gráficos de evolução: a partir do início da série contínua.
@@ -213,6 +217,14 @@ const Telas = (() => {
     if (R.f.soDemonstradora) {
       const aviso = el("div", { class: "filtro-ativo" }, "Filtro aplicado: <strong>Apenas lojas com atendimento de demonstradora</strong> no período.");
       aviso.append(el("button", { type: "button", class: "btn mini", onclick: () => window.dispatchEvent(new CustomEvent("painel:demonstradora")) }, "Tirar filtro"));
+      alvo.append(aviso);
+    }
+    // Filtro "Apenas produtos lançados" (botão das abas de clientes e de produtos): vale para o painel todo.
+    if (R.f.soLancamentos) {
+      const aviso = el("div", { class: "filtro-ativo" }, R.lancadosAtivo
+        ? `Filtro aplicado: <strong>Apenas produtos lançados no período</strong> (${Fmt.num(R.nLancados)} ${R.nLancados === 1 ? "produto vendido" : "produtos vendidos"} no período e não no mesmo período do ano anterior).`
+        : "Filtro <strong>Apenas produtos lançados</strong> sem efeito: o período escolhido não tem comparação com o ano anterior.");
+      aviso.append(el("button", { type: "button", class: "btn mini", onclick: () => window.dispatchEvent(new CustomEvent("painel:lancamentos")) }, "Tirar filtro"));
       alvo.append(aviso);
     }
     // Filtros por clique acumulados: um selo por filtro (× tira só ele) e "Limpar filtros" tira todos.
@@ -420,6 +432,7 @@ ${atualPeriodo.includes(" - ") ? `De ${atualPeriodo.replace(" - ", " até ")}` :
   }
 
   function visaoGeral(R, alvo, redesenhar) {
+    botaoDemonstradora(R, alvo, false);
     avisoComparacao(R, alvo); avisoPedidos(R, alvo);
     const S = R.totS, C = R.temC ? R.totC : null;
     const comp = C ? textoComp(R) : "";
@@ -652,19 +665,30 @@ ${atualPeriodo.includes(" - ") ? `De ${atualPeriodo.replace(" - ", " até ")}` :
 
   // Botão "Apenas lojas com atendimento" no topo direito (abas de clientes e de produtos): filtra o painel todo para as
   // lojas com agenda de demonstradora no período; clicar de novo tira.
-  function botaoDemonstradora(R, alvo) {
-    if (!M.temDemonstradoras) return;
+  // Botões de filtro do topo da aba: "Apenas lojas com atendimento" (abas de clientes e de produtos) e "Apenas produtos
+  // lançados" (todas as abas).
+  function botaoDemonstradora(R, alvo, comDemonstradora = true) {
     const barra = el("div", { class: "barra-aba" });
-    const ligado = Boolean(R.f.soDemonstradora);
-    barra.append(el("button", { type: "button", class: "btn btn-demonstradora", "aria-pressed": ligado ? "true" : "false",
-      title: "Lojas com agenda de demonstradora em pelo menos um mês do período (a comparação usa as mesmas lojas)",
-      onclick: () => window.dispatchEvent(new CustomEvent("painel:demonstradora")) }, ligado ? "✓ Apenas lojas com atendimento" : "Apenas lojas com atendimento"));
+    if (comDemonstradora && M.temDemonstradoras) {
+      const ligado = Boolean(R.f.soDemonstradora);
+      barra.append(el("button", { type: "button", class: "btn btn-demonstradora", "aria-pressed": ligado ? "true" : "false",
+        title: "Lojas com agenda de demonstradora em pelo menos um mês do período (a comparação usa as mesmas lojas)",
+        onclick: () => window.dispatchEvent(new CustomEvent("painel:demonstradora")) }, ligado ? "✓ Apenas lojas com atendimento" : "Apenas lojas com atendimento"));
+    }
+    // Produtos lançados: vendidos pela empresa no período e não no mesmo período do ano anterior (precisa da comparação).
+    const lancados = Boolean(R.f.soLancamentos);
+    const botao = el("button", { type: "button", class: "btn btn-demonstradora", "aria-pressed": lancados ? "true" : "false",
+      title: R.temC ? "Produtos vendidos pela empresa no período e não vendidos no mesmo período do ano anterior" : "Precisa do período de comparação (mesmo período do ano anterior)",
+      onclick: () => window.dispatchEvent(new CustomEvent("painel:lancamentos")) },
+      lancados && R.lancadosAtivo ? `✓ Apenas produtos lançados (${Fmt.num(R.nLancados)})` : "Apenas produtos lançados");
+    if (!R.temC && !lancados) botao.disabled = true;
+    barra.append(botao);
     alvo.append(barra);
   }
 
   function clientes(R, alvo, redesenhar) {
     botaoDemonstradora(R, alvo);
-    avisoComparacao(R, alvo);
+    avisoComparacao(R, alvo); avisoPedidos(R, alvo);
     analisesGerais(R, alvo);
     // Regras de classificação logo abaixo das análises gerais.
     alvo.append(el("div", { class: "regras-clientes-aba" }, REGRAS_CLIENTES));
@@ -896,7 +920,20 @@ ${atualPeriodo.includes(" - ") ? `De ${atualPeriodo.replace(" - ", " até ")}` :
     const mesS = new Uint8Array(nC * nP), mesC = new Uint8Array(nC * nP);
     const diasS = new Map(), diasC = new Map();
     const dia = (d) => { const s = String(d); return Date.UTC(Number(s.slice(0, 4)), Number(s.slice(4, 6)) - 1, Number(s.slice(6, 8))) / 86400000; };
-    for (let i = 0; i < O.n; i += 1) {
+    // Com filtro de produto (categoria, família, lançados, produto clicado): mês com compra = faturamento positivo de algum
+    // produto filtrado (mesma regra do ativo nesse caso). A base de faturamento por produto do painel só tem o mês, então o
+    // intervalo entre compras fica sem valor ("—").
+    if (R.filtroProduto) {
+      const { F } = M;
+      for (let i = 0; i < F.n; i += 1) {
+        const c = F.c[i];
+        if (F.val[i] <= 0 || !R.cOK[c] || !R.prOK[F.pr[i]] || !R.vOK[F.v[i]]) continue;
+        const p = F.p[i];
+        if (R.inS[p]) mesS[c * nP + p] = 1;
+        if (R.inC[p]) mesC[c * nP + p] = 1;
+      }
+    }
+    for (let i = 0; i < (R.filtroProduto ? 0 : O.n); i += 1) {
       const c = O.c[i];
       // Mês com compra = pedido ou nota de venda (mesma regra do ativo). Intervalo entre compras: só dias de nota,
       // para o dia do pedido e o dia da nota do mesmo pedido não contarem como duas compras.
@@ -1544,7 +1581,7 @@ ${atualPeriodo.includes(" - ") ? `De ${atualPeriodo.replace(" - ", " até ")}` :
 
   function analiseProdutos(R, alvo, redesenhar) {
     botaoDemonstradora(R, alvo);
-    avisoComparacao(R, alvo);
+    avisoComparacao(R, alvo); avisoPedidos(R, alvo);
     analisesGerais(R, alvo);
     const pAtual = textoPeriodo(R.S), pAnterior = R.temC ? textoPeriodo(R.C) : "";
     const sku = nivelAP === "sku";
@@ -1780,6 +1817,7 @@ ${atualPeriodo.includes(" - ") ? `De ${atualPeriodo.replace(" - ", " até ")}` :
   }
 
   function geografia(R, alvo, redesenhar) {
+    botaoDemonstradora(R, alvo, false);
     avisoComparacao(R, alvo); avisoPedidos(R, alvo);
     // Seleção ativa (estado, região, "Outras" ou cidade): filtra a página toda; clicar de novo no mesmo item tira a seleção.
     // Os seletores (regiões, mapa e tabela por estado) usam o cálculo sem a seleção, para continuar mostrando todos.
@@ -1880,6 +1918,7 @@ ${atualPeriodo.includes(" - ") ? `De ${atualPeriodo.replace(" - ", " até ")}` :
     // Nome com a primeira letra de cada palavra em maiúscula; partículas (da, de, do, das, dos, e) em minúsculas.
     const nomeProprio = (s) => String(s || "").toLowerCase().split(/\s+/).filter(Boolean).map((p, i) => (i > 0 && ["da", "de", "do", "das", "dos", "e"].includes(p) ? p : p.replace(/^(\(?)(\p{L})/u, (m, a, b) => a + b.toUpperCase()))).join(" ");
     const nomeVendedoresFiltrados = () => { const nomes = [...R.f.vendedor].map((v) => nomeProprio(M.vendedores[v]?.nome)).filter(Boolean).sort((a, b) => a.localeCompare(b, "pt-BR")); return nomes.length <= 2 ? nomes.join(", ") : `${nomes.slice(0, 2).join(", ")} e mais ${nomes.length - 2}`; };
+    botaoDemonstradora(R, alvo, false);
     avisoComparacao(R, alvo); avisoPedidos(R, alvo);
     // Vendedores filtrados (menu ou clique na Visão geral): aviso com botão para voltar à equipe toda.
     if (R.f.vendedor?.size) {
@@ -2071,6 +2110,28 @@ ${atualPeriodo.includes(" - ") ? `De ${atualPeriodo.replace(" - ", " até ")}` :
     { id: "equipe", nome: "Análise da Equipe Comercial", fn: equipe },
     { id: "geografia", nome: "Análises Geográficas", fn: geografia },
   ];
+  telas.textoPeriodo = textoPeriodo; // usado pelo Exportar apresentação (js/apresentacao.js)
+  // Link "Abrir no painel" dos slides: opções internas das abas que mudam o que a tela mostra. Vendedor, SKU e
+  // categoria vão por nome/código (as posições internas mudam a cada carga de dados).
+  telas.estadoInterno = () => ({
+    rankVend, nivelAP, nivelGeo,
+    vendSel: vendSel === null ? null : M.vendedores[vendSel]?.nome ?? null,
+    skuSel: skuSel === null ? null : M.produtos[skuSel]?.cod ?? null,
+    reajCat: reajCat === null ? null : M.dic.categoria[reajCat] ?? null,
+  });
+  telas.definirEstadoInterno = (o = {}) => {
+    if (typeof o.rankVend === "string") rankVend = o.rankVend;
+    if (typeof o.nivelAP === "string") nivelAP = o.nivelAP;
+    if (typeof o.nivelGeo === "string") nivelGeo = o.nivelGeo;
+    const pos = (lista, valor) => { const i = valor === null || valor === undefined ? -1 : lista.indexOf(valor); return i >= 0 ? i : null; };
+    vendSel = pos(M.vendedores.map((v) => v.nome), o.vendSel);
+    skuSel = pos(M.produtos.map((p) => p.cod), o.skuSel);
+    reajCat = pos(M.dic.categoria, o.reajCat);
+  };
+  // Seleção geográfica (região, "Outras" ou cidade) a partir do tipo e do valor, igual ao clique na aba geográfica.
+  telas.geoPorTipo = (tipo, valor) => (tipo === "regiao" ? { tipo, valor, rotulo: `Região ${valor}`, ok: (c) => UF_REGIAO[ufDoCliente(c)] === valor }
+    : tipo === "outras" ? { tipo, valor, rotulo: "Outras (demais estados)", ok: (c) => !UF_PRIORITARIAS.includes(ufDoCliente(c)) }
+    : tipo === "cidade" ? { tipo, valor, rotulo: valor, ok: (c) => (M.dic.municipio[M.clientes[c].mun] || "(sem cidade)") === valor } : null);
   // "Limpar filtros": zera também os filtros internos das telas (situação, clique nos gráficos, seleções e alternadores).
   telas.limparFiltros = () => {
     window.__detalheCliente = "todos";

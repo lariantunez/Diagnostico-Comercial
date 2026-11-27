@@ -15,7 +15,7 @@
 
   const estado = {
     S: new Set(padraoS), modo: "ano",
-    nomeFantasia: new Set(), canal: new Set(), regiao: new Set(), uf: new Set(), vendedor: new Set(), familia: new Set(), categoria: new Set(), demonstradora: new Set(), geo: null, selecao: null, selecoes: [], soDemonstradora: false,
+    nomeFantasia: new Set(), canal: new Set(), regiao: new Set(), uf: new Set(), vendedor: new Set(), familia: new Set(), categoria: new Set(), demonstradora: new Set(), geo: null, selecao: null, selecoes: [], soDemonstradora: false, soLancamentos: false,
     aba: (location.hash || "#geral").slice(1),
   };
   if (!Telas.some((t) => t.id === estado.aba)) estado.aba = "geral";
@@ -64,6 +64,7 @@
     estado.geo = null;
     estado.selecao = null; estado.selecoes = [];
     estado.soDemonstradora = false;
+    estado.soLancamentos = false;
     Telas.limparFiltros?.();
     document.querySelectorAll(".regras-clientes[open]").forEach((d) => { d.open = false; });
     agendar();
@@ -141,6 +142,12 @@
     estado.selecao = null; estado.selecoes = []; // a seleção por clique foi montada com a outra base de lojas
     agendar();
   });
+  // Botão "Apenas produtos lançados" (abas de clientes e de produtos): liga/desliga o filtro de produtos lançados no
+  // período (vendidos pela empresa no período e não no mesmo período do ano anterior) no painel todo.
+  window.addEventListener("painel:lancamentos", () => {
+    estado.soLancamentos = !estado.soLancamentos;
+    agendar();
+  });
   // Clique em estado, região ou cidade: filtra o painel todo. UF vai para o filtro do menu; região e cidade ficam em estado.geo.
   window.addEventListener("painel:filtroGeo", (evento) => {
     const { uf, geo, aba } = evento.detail || {};
@@ -190,9 +197,93 @@
       alvo.innerHTML = `<p class="aviso"><strong>Erro ao montar a tela:</strong> ${Fmt.esc(e.message)}</p>`;
     }
     window.scrollTo(0, y);
+    // Aberto pelo link de um slide: rola até o cartão da tabela e destaca por alguns segundos.
+    if (cartaoAlvo) {
+      const titulo = cartaoAlvo;
+      cartaoAlvo = null;
+      requestAnimationFrame(() => {
+        const h2 = [...alvo.querySelectorAll(".cabecalho-cartao h2")].find((h) => h.textContent.trim() === titulo);
+        const cartao = h2?.closest(".cartao");
+        if (!cartao) return;
+        cartao.scrollIntoView({ behavior: "smooth", block: "start" });
+        cartao.classList.add("destaque-link");
+        setTimeout(() => cartao.classList.remove("destaque-link"), 4000);
+      });
+    }
   }
+  // Exportar apresentação (js/apresentacao.js): o cálculo atual (com todos os filtros) e a lista dos filtros aplicados.
+  function filtrosAplicados() {
+    const lista = [];
+    for (const [chave, , rotulo, opcoes] of defs) {
+      if (!estado[chave].size) continue;
+      const nomes = opcoes.filter((o) => estado[chave].has(o.id)).map((o) => Fmt.nome(o.nome));
+      lista.push([rotulo.replace(" (linha)", ""), nomes]);
+    }
+    if (estado.geo) lista.push(["Seleção geográfica", [Fmt.nome(estado.geo.rotulo)]]);
+    if (estado.soDemonstradora) lista.push(["Lojas", ["Apenas lojas com atendimento de demonstradora"]]);
+    if (estado.soLancamentos) lista.push(["Produtos", ["Apenas produtos lançados no período"]]);
+    if (estado.selecao) lista.push(["Seleção no painel", (estado.selecao.rotulos || [estado.selecao.rotulo]).map((r) => Fmt.nome(r))]);
+    return lista;
+  }
+  // Link "Abrir no painel" dos slides: guarda no servidor o estado atual (período, menu, cliques, seleção geográfica,
+  // demonstradora e opções das abas) e devolve um endereço curto (#v=<código>). Filtros e cliques vão por nome
+  // (nome fantasia, código do produto...), não pela posição interna, que muda a cada carga de dados.
+  function estadoParaLink(extra = {}) {
+    const filtros = {};
+    for (const [chave, , , opcoes] of defs) if (estado[chave].size) filtros[chave] = opcoes.filter((o) => estado[chave].has(o.id)).map((o) => o.nome);
+    const selecoes = estado.selecoes.map((s) => ({ rotulo: s.rotulo, clientes: s.clientes ? [...new Set([...s.clientes].map(nomeSel))] : null, produtos: s.produtos ? [...s.produtos].map((p) => M.produtos[p].cod) : null }));
+    return { S: [...estado.S], filtros, geo: estado.geo ? { tipo: estado.geo.tipo, valor: estado.geo.valor } : null, soDemonstradora: estado.soDemonstradora, soLancamentos: estado.soLancamentos, selecoes, aba: estado.aba, interno: Telas.estadoInterno?.(), ...extra };
+  }
+  async function criarLink(extra) {
+    return null; // demonstração sem servidor: sem link "Abrir no painel"
+    const r = await fetch("api/visoes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ estado: estadoParaLink(extra) }) });
+    if (!r.ok) throw new Error("Não foi possível criar o link do painel.");
+    const { id } = await r.json();
+    return `${location.origin}${location.pathname}#v=${id}`;
+  }
+  let cartaoAlvo = null; // título do cartão para rolar a tela depois de abrir pelo link
+  async function abrirVisao(id) {
+    try {
+      const r = await fetch(`api/visoes/${encodeURIComponent(id)}`);
+      if (!r.ok) throw new Error("link não encontrado");
+      const { estado: e } = await r.json();
+      const S = (e.S || []).filter((p) => M.periodos.includes(p));
+      if (S.length) { estado.S = new Set(S); ctrls.S.definir(S); }
+      for (const [chave, , , opcoes] of defs) {
+        const nomes = new Set(e.filtros?.[chave] || []);
+        estado[chave] = new Set(opcoes.filter((o) => nomes.has(o.nome)).map((o) => o.id));
+        ctrls[chave].definir([...estado[chave]]);
+      }
+      estado.geo = e.geo ? Telas.geoPorTipo(e.geo.tipo, e.geo.valor) : null;
+      estado.soDemonstradora = Boolean(e.soDemonstradora);
+      estado.soLancamentos = Boolean(e.soLancamentos);
+      const codigos = new Map(M.produtos.map((p, i) => [p.cod, i]));
+      estado.selecoes = (e.selecoes || []).map((s) => {
+        const nomes = s.clientes ? new Set(s.clientes) : null;
+        const clientes = nomes ? new Set() : null;
+        if (nomes) for (let c = 0; c < M.nC; c += 1) if (nomes.has(nomeSel(c))) clientes.add(c);
+        return { rotulo: s.rotulo, clientes, produtos: s.produtos ? new Set(s.produtos.map((cod) => codigos.get(cod)).filter((i) => i !== undefined)) : null };
+      });
+      estado.selecao = combinarSelecoes(estado.selecoes);
+      Telas.definirEstadoInterno?.(e.interno);
+      if (Telas.some((t) => t.id === e.aba)) estado.aba = e.aba;
+      nav.querySelectorAll("button").forEach((x) => x.setAttribute("aria-selected", x.dataset.id === estado.aba ? "true" : "false"));
+      cartaoAlvo = e.cartao || null;
+    } catch (erro) {
+      const aviso = UI.el("div", { class: "filtro-ativo" }, `<strong>Não foi possível abrir o link da apresentação</strong> (${Fmt.esc(erro.message)}). O painel abriu sem os filtros.`);
+      document.querySelector(".topo").after(aviso);
+    }
+    history.replaceState(null, "", `#${estado.aba}`);
+    recalcular();
+  }
+  window.Painel = { resultado: () => R, filtrosAplicados, criarLink };
+
   let largura = window.innerWidth;
   window.addEventListener("resize", () => { if (Math.abs(window.innerWidth - largura) > 40) { largura = window.innerWidth; clearTimeout(timer); timer = setTimeout(desenhar, 150); } });
 
-  recalcular();
+  // Endereço #v=<código>: veio do botão "Abrir no painel" de uma apresentação.
+  const visao = /^#v=([A-Za-z0-9_-]+)$/.exec(location.hash)?.[1];
+  if (visao) abrirVisao(visao); else recalcular();
+  // Link de apresentação aberto com o painel já aberto na mesma aba (só o "#" muda, a página não recarrega).
+  window.addEventListener("hashchange", () => { const v = /^#v=([A-Za-z0-9_-]+)$/.exec(location.hash)?.[1]; if (v) abrirVisao(v); });
 })();

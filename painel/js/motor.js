@@ -91,6 +91,25 @@ const Motor = (() => {
   }
 
   // f = { S: [periodos], modo, nomeFantasia, canal, regiao, uf, vendedor, familia, categoria }
+  // "Apenas produtos lançados" (regra de 27/11/2026): produto vendido pela empresa toda (faturamento positivo) em algum
+  // mês do período e em nenhum mês do mesmo período do ano anterior. Vale para a empresa toda, mesmo com outros filtros.
+  let vendaPositiva = null; // produto × mês com venda de faturamento positivo (calculado uma vez)
+  function produtosLancados(Sref, modo) {
+    if (!vendaPositiva) {
+      vendaPositiva = new Uint8Array(nPr * nP);
+      for (let i = 0; i < F.n; i += 1) if (F.val[i] > 0) vendaPositiva[F.pr[i] * nP + F.p[i]] = 1;
+    }
+    const Cref = periodosComparacao(Sref, modo);
+    if (!Cref.length || Cref.some((p) => Sref.includes(p))) return null; // sem ano anterior para comparar
+    const idx = (lista) => lista.filter((p) => pIdx.has(p)).map((p) => pIdx.get(p));
+    const iS = idx(Sref), iC = idx(Cref), lancados = new Uint8Array(nPr);
+    for (let pr = 0; pr < nPr; pr += 1) {
+      const base = pr * nP;
+      if (iS.some((p) => vendaPositiva[base + p]) && !iC.some((p) => vendaPositiva[base + p])) lancados[pr] = 1;
+    }
+    return lancados;
+  }
+
   function calcular(f) {
     const S = [...f.S].sort();
     const Cbruto = periodosComparacao(S, f.modo);
@@ -142,9 +161,14 @@ const Motor = (() => {
     const okCat = mascara(nPr, f.categoria, "cat", produtos);
     for (let i = 0; i < nPr; i += 1) prOK[i] &= okCat[i] & (catFora[produtos[i].cat] ? 0 : 1);
     if (f.selecao?.produtos) for (let i = 0; i < nPr; i += 1) if (prOK[i] && !f.selecao.produtos.has(i)) prOK[i] = 0;
+    // Lançados: definidos pelo período escolhido (f.SDemo quando o cálculo é de outro ciclo, ex.: ciclo anterior dos perdidos).
+    const lancados = f.soLancamentos ? produtosLancados(f.SDemo ? [...f.SDemo].sort() : S, f.modo) : null;
+    let nLancados = 0; // só os que aparecem no painel (fora as categorias excluídas)
+    if (lancados) for (let i = 0; i < nPr; i += 1) if (lancados[i] && !catFora[produtos[i].cat]) nLancados += 1;
+    if (lancados) for (let i = 0; i < nPr; i += 1) prOK[i] &= lancados[i];
     const vOK = new Uint8Array(nV).fill(1);
     if (f.vendedor && f.vendedor.size) for (let i = 0; i < nV; i += 1) vOK[i] = f.vendedor.has(i) ? 1 : 0;
-    const filtroProduto = Boolean((f.familia && f.familia.size) || (f.categoria && f.categoria.size) || f.selecao?.produtos);
+    const filtroProduto = Boolean((f.familia && f.familia.size) || (f.categoria && f.categoria.size) || f.selecao?.produtos || lancados);
 
     const cli = { valS: new Float64Array(nC), valC: new Float64Array(nC), fatS: new Float64Array(nC), fatC: new Float64Array(nC), qS: new Float64Array(nC), qC: new Float64Array(nC), qpS: new Float64Array(nC), qpC: new Float64Array(nC),
       primeiro: new Int16Array(nC).fill(-1), ultimo: new Int16Array(nC).fill(-1), pedS: new Float64Array(nC), pedC: new Float64Array(nC),
@@ -279,6 +303,11 @@ const Motor = (() => {
     }
     cli.ativoS = ativoS; cli.ativoC = ativoC; cli.perdidoFunc = perdidoFunc;
 
+    // Filtro de produto (categoria, família, lançados ou produto clicado): cada pedido também traz outros produtos, então
+    // não faz sentido analisar pedidos e ticket médio por pedido de um recorte de produtos. Ficam sem valor (NaN → "—")
+    // em todo o painel, em vez de mostrar os pedidos de todos os produtos (regra de 27/11/2026).
+    if (filtroProduto) { cli.pedS.fill(NaN); cli.pedC.fill(NaN); vend.pedS.fill(NaN); vend.pedC.fill(NaN); mes.ped.fill(NaN); }
+
     const tot = (lado) => {
       let val = 0, q = 0, qp = 0, ativos = 0, ped = 0;
       const vals = lado === "S" ? cli.valS : cli.valC, qs = lado === "S" ? cli.qS : cli.qC, qps = lado === "S" ? cli.qpS : cli.qpC, peds = lado === "S" ? cli.pedS : cli.pedC;
@@ -296,7 +325,7 @@ const Motor = (() => {
       g.valS += cli.valS[c]; g.valC += cli.valC[c]; g.delta += cli.valS[c] - cli.valC[c];
     }
 
-    return { f, S, C, temC, sobreposto, cIncompleta, inS, inC, filtroProduto, cli, prod, mes, vend, cliCat, vendCat, vendCli, status, STATUS, catsS, catsC, ponte, totS: tot("S"), totC: tot("C"), cOK, prOK, vOK, funcionario, demo };
+    return { f, S, C, temC, sobreposto, cIncompleta, inS, inC, filtroProduto, nLancados, lancadosAtivo: Boolean(lancados), cli, prod, mes, vend, cliCat, vendCat, vendCli, status, STATUS, catsS, catsC, ponte, totS: tot("S"), totC: tot("C"), cOK, prOK, vOK, funcionario, demo };
   }
 
   // Preço x Mix x Volume. nivel: "produto" | "categoria"

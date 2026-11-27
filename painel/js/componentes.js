@@ -503,6 +503,8 @@ const UI = (() => {
       document.body.append(a); a.click(); a.remove();
     }
     desenhar();
+    // Exportar apresentação: a tabela completa (todas as linhas, na ordem e com a busca atuais), não só a parte desenhada.
+    raiz.dadosTabela = () => ({ colunas, linhas: filtradas() });
     return raiz;
   }
 

@@ -437,7 +437,7 @@ th.anterior, td.anterior { color: var(--text-muted); }
 .crescimento-destaque.selecionado { outline: 2px solid var(--series-1); }
 .barra-situacao { display: flex; justify-content: flex-end; margin: 20px 0 4px; }
 /* Botão "Apenas lojas com atendimento" no topo direito da aba de clientes. */
-.barra-aba { display: flex; justify-content: flex-end; margin: 0 0 8px; }
+.barra-aba { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin: 0 0 8px; }
 .btn-demonstradora { font-weight: 600; padding: 8px 16px; }
 .btn-demonstradora[aria-pressed="true"] { background: var(--series-1); border-color: var(--series-1); color: #fff; }
 
@@ -660,3 +660,43 @@ th.op-igual::before, th.op-mais::before { position: absolute; left: -0.35em; col
 th.op-igual::before, th.op-mais::before { top: 50%; transform: translateY(-50%); }
 th.op-igual::before { content: "="; }
 th.op-mais::before { content: "+"; }
+
+/* Exportar apresentação (PowerPoint): janela de escolha dos slides */
+.modal-fundo { position: fixed; inset: 0; z-index: 100; background: rgba(15, 23, 42, .45); display: flex; align-items: flex-start; justify-content: center; padding: 48px 16px; overflow: auto; }
+.modal { background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 20px 50px rgba(0, 0, 0, .3); width: min(780px, 100%); padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
+.modal h2 { margin: 0; font-size: 18px; }
+.modal-resumo { display: flex; flex-direction: column; gap: 4px; background: var(--surface-2); border-left: 4px solid var(--series-1); border-radius: 6px; padding: 10px 12px; color: var(--text-secondary); }
+.modal-resumo strong { color: var(--text-primary); }
+.modal-resumo .nota-filtro { color: var(--text-muted); }
+.modal .campo { display: flex; flex-direction: column; gap: 4px; color: var(--text-secondary); }
+.modal .campo input { font: inherit; height: 34px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-1); color: var(--text-primary); }
+.modal-campos { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: end; }
+.opcoes-tema { display: flex; gap: 14px; height: 34px; align-items: center; color: var(--text-primary); }
+.opcoes-tema label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+.lista-abas { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 8px; max-height: 52vh; overflow: auto; }
+.lista-aba + .lista-aba { border-top: 1px solid var(--border); }
+.lista-aba-topo { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
+.lista-aba-abrir { font: inherit; flex: 1; text-align: left; background: none; border: 0; color: var(--text-primary); cursor: pointer; padding: 2px 0; font-weight: 600; }
+.lista-aba-abrir .seta { display: inline-block; width: 14px; color: var(--series-1); transition: transform .15s; }
+.lista-aba-abrir[aria-expanded="true"] .seta { transform: rotate(90deg); }
+.lista-aba-conta { color: var(--text-muted); font-size: 12px; }
+.lista-aba-itens { padding: 0 12px 10px 38px; display: flex; flex-direction: column; gap: 2px; }
+.lista-aba-itens[hidden] { display: none; }
+.lista-aba-itens label { display: flex; gap: 8px; align-items: flex-start; padding: 3px 0; cursor: pointer; }
+.lista-aba-itens label input { margin-top: 3px; }
+.modal-msg { color: var(--text-secondary); min-height: 1.2em; }
+.modal-msg.erro { color: var(--div-neg); }
+.modal-acoes { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.modal-acoes > div { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 640px) { .modal-campos { grid-template-columns: 1fr; } .modal { padding: 16px; } }
+/* Miniatura do gráfico ao passar o mouse no nome (janela Exportar apresentação) */
+.miniatura-grafico { position: fixed; z-index: 120; width: 400px; padding: 6px; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 12px 32px rgba(0, 0, 0, .3); pointer-events: none; }
+.miniatura-grafico[hidden] { display: none; }
+.miniatura-grafico img { display: block; width: 100%; max-height: 320px; object-fit: contain; border-radius: 4px; }
+.miniatura-grafico .carregando { display: block; padding: 18px 10px; color: var(--text-muted); text-align: center; }
+/* Exportar apresentação: a área invisível tem largura fixa; anula o texto em linha única pensado para telas muito largas */
+.area-captura .kpi .detalhe-valor .kpi-filtro, .area-captura .kpi .rodape-variacao .delta, .area-captura .kpi .linha-valor-atual .delta { white-space: normal; }
+.area-captura .kpi.kpi-grade .rotulo { white-space: normal; overflow: visible; }
+.lista-aba-itens small { color: var(--text-muted); }
+.cartao.destaque-link { outline: 3px solid var(--series-1); outline-offset: 2px; transition: outline-color .4s; }
+.modal-acoes .btn, .lista-aba-abrir { user-select: none; } /* cliques rápidos não selecionam o texto */
